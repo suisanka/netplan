@@ -1,0 +1,163 @@
+namespace PENetplan.Ipc;
+
+enum ErrorCode : ubyte {
+  None = 0,
+  InvalidRequest = 1,
+  InvalidConfig = 2,
+  Unsupported = 3,
+  PermissionDenied = 4,
+  NotFound = 5,
+  Internal = 6
+}
+
+enum CapabilityState : ubyte {
+  Unavailable = 0,
+  ReadOnly = 1,
+  DryRun = 2,
+  Available = 3
+}
+
+enum ConfigFormat : ubyte {
+  Auto = 0,
+  Yaml = 1,
+  Json = 2
+}
+
+enum ConfigAction : ubyte {
+  Validate = 0,
+  Plan = 1,
+  Apply = 2
+}
+
+enum OperationRisk : ubyte {
+  ReadOnly = 0,
+  Low = 1,
+  Connectivity = 2,
+  Destructive = 3
+}
+
+enum JobState : ubyte {
+  Queued = 0,
+  Running = 1,
+  Succeeded = 2,
+  Failed = 3,
+  RolledBack = 4
+}
+
+table PingRequest {}
+
+table PingResponse {
+  daemon_version:string (required);
+  protocol_version:uint;
+}
+
+table CapabilitiesRequest {}
+
+table Capability {
+  name:string (required);
+  state:CapabilityState;
+  reason:string;
+}
+
+table CapabilitiesResponse {
+  capabilities:[Capability] (required);
+}
+
+table ListAdaptersRequest {}
+
+table IpAddress {
+  address:string (required);
+  prefix_length:ubyte;
+}
+
+table Adapter {
+  if_index:uint;
+  name:string (required);
+  description:string;
+  guid:string;
+  mac_address:string;
+  status:string;
+  hardware:bool;
+  ipv4:[IpAddress];
+  ipv6:[IpAddress];
+}
+
+table ListAdaptersResponse {
+  adapters:[Adapter] (required);
+}
+
+table ConfigRequest {
+  action:ConfigAction;
+  format:ConfigFormat;
+  document:[ubyte] (required);
+  dry_run:bool = true;
+}
+
+table ValidationIssue {
+  path:string;
+  message:string (required);
+}
+
+table ValidateConfigResponse {
+  valid:bool;
+  issues:[ValidationIssue] (required);
+}
+
+table Operation {
+  id:string (required);
+  capability:string (required);
+  summary:string (required);
+  risk:OperationRisk;
+  target:string;
+}
+
+table PlanConfigResponse {
+  operations:[Operation] (required);
+}
+
+table ApplyConfigResponse {
+  job_id:string (required);
+  state:JobState;
+  operations:[Operation] (required);
+}
+
+table JobStatusRequest {
+  job_id:string (required);
+}
+
+table JobStatusResponse {
+  job_id:string (required);
+  state:JobState;
+  message:string;
+}
+
+table ErrorResponse {
+  code:ErrorCode;
+  message:string (required);
+}
+
+union Payload {
+  PingRequest,
+  PingResponse,
+  CapabilitiesRequest,
+  CapabilitiesResponse,
+  ListAdaptersRequest,
+  ListAdaptersResponse,
+  ConfigRequest,
+  ValidateConfigResponse,
+  PlanConfigResponse,
+  ApplyConfigResponse,
+  JobStatusRequest,
+  JobStatusResponse,
+  ErrorResponse
+}
+
+table Envelope {
+  protocol_version:uint = 1;
+  request_id:ulong;
+  payload:Payload;
+}
+
+root_type Envelope;
+file_identifier "PNET";
+file_extension "pnet";

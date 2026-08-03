@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "protect": {
+    "management_interfaces": [
+      { "if_index": 6 }
+    ]
+  },
+  "adapters": [
+    {
+      "selector": { "if_index": 7 },
+      "enabled": true,
+      "ipv4": {
+        "mode": "dhcp",
+        "dns_from_dhcp": true
+      }
+    }
+  ]
+}

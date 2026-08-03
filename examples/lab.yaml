@@ -1,0 +1,54 @@
+version: 1
+
+# Never mutate the interface carrying RDP, SSH, or the tunnel agent.
+protect:
+  management_interfaces:
+    - if_index: 6
+
+identity:
+  computer_name: PE-LAB
+  workgroup: WORKGROUP
+  dns_suffix: lab.example
+
+adapters:
+  - selector:
+      if_index: 7
+      description_contains: Realtek
+    enabled: true
+    ipv4:
+      mode: static
+      addresses:
+        - 192.0.2.10/24
+      gateways:
+        - 192.0.2.1
+      dns:
+        - 1.1.1.1
+        - 2606:4700:4700::1111
+
+wifi:
+  - ssid: PE-Lab-WiFi
+    authentication: wpa2_personal
+    psk:
+      source: env
+      value: NETPLAN_WIFI_PSK
+    auto_connect: true
+
+smb:
+  shares:
+    - name: diagnostics
+      path: X:\diagnostics
+      description: PE diagnostics
+      read_only: false
+  mappings:
+    - remote: '\\fileserver\images'
+      local: 'Z:'
+      username: lab\pe
+      password:
+        source: env
+        value: NETPLAN_SMB_PASSWORD
+
+hooks:
+  - stage: after_apply
+    program: X:\Windows\System32\ipconfig.exe
+    args: [/all]
+    wait: true

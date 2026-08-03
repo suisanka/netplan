@@ -1,0 +1,22 @@
+[package]
+name = "netplan-ffi"
+description = "C ABI for PE Netplan"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+
+[lib]
+name = "netplan"
+crate-type = ["cdylib", "staticlib"]
+doc = false
+
+[dependencies]
+netplan = { path = "../netplan" }
+tokio.workspace = true
+
+[lints]
+workspace = true

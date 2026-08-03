@@ -1,0 +1,27 @@
+[package]
+name = "netpland"
+description = "Privileged PE Netplan daemon"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "netpland"
+path = "src/main.rs"
+doc = false
+
+[dependencies]
+clap.workspace = true
+netplan = { path = "../netplan" }
+tokio.workspace = true
+uuid.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows.workspace = true
+
+[lints]
+workspace = true

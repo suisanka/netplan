@@ -1,0 +1,24 @@
+# Reference material is intentionally local-only and must never be published.
+/PENetwork.au3/
+/.DS_Store
+
+# Rust build artifacts and local tooling.
+/target/
+**/*.rs.bk
+/.cargo-local/
+/.local/
+
+# IDE and OS files.
+.idea/
+.vscode/
+Thumbs.db
+Desktop.ini
+
+# Runtime state and secrets.
+*.log
+*.pid
+*.key
+*.pem
+*.pfx
+*.p12
+netplan-state/
