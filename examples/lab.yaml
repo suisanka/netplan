@@ -1,5 +1,8 @@
 version: 1
 
+# Review every selector/path before using --live. This is a schema example, not a
+# configuration that is safe to apply unchanged on an arbitrary machine.
+
 # Never mutate the interface carrying RDP, SSH, or the tunnel agent.
 protect:
   management_interfaces:
@@ -26,26 +29,64 @@ adapters:
         - 2606:4700:4700::1111
 
 wifi:
-  - ssid: PE-Lab-WiFi
+  - name: pe-lab
+    ssid: PE-Lab-WiFi
     authentication: wpa2_personal
     psk:
       source: env
       value: NETPLAN_WIFI_PSK
     auto_connect: true
+    hidden: false
+
+wifi_actions:
+  - action: scan
+  - action: connect
+    profile: pe-lab
 
 smb:
+  accounts:
+    - id: diagnostics-user
+      kind: local
+      username: pe-diagnostics
+      password:
+        source: env
+        value: NETPLAN_LOCAL_SMB_PASSWORD
+    - id: fileserver
+      kind: credential
+      username: lab\pe
+      password:
+        source: env
+        value: NETPLAN_REMOTE_SMB_PASSWORD
   shares:
     - name: diagnostics
       path: X:\diagnostics
       description: PE diagnostics
       read_only: false
+      accounts: [diagnostics-user]
   mappings:
     - remote: '\\fileserver\images'
       local: 'Z:'
-      username: lab\pe
-      password:
-        source: env
-        value: NETPLAN_SMB_PASSWORD
+      account: fileserver
+
+firewall:
+  enabled: true
+
+services:
+  - name: LanmanServer
+    state: running
+  - name: LanmanWorkstation
+    state: running
+
+# Driver installation is irreversible and therefore intentionally omitted from the
+# active example. Its shape is:
+# drivers:
+#   - action: install
+#     inf_path: X:\drivers\net.inf
+#     hardware_id: 'PCI\VEN_1234&DEV_5678'
+#     force: false
+#     restart: if_required
+#   - action: restart_adapter
+#     selector: { if_index: 7 }
 
 hooks:
   - stage: after_apply

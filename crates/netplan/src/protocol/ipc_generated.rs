@@ -13,6 +13,7 @@
 
 extern crate alloc;
 
+
 #[allow(unused_imports, dead_code)]
 pub mod penetplan {
 
@@ -585,10 +586,10 @@ impl ::flatbuffers::SimpleToVerifyInSlice for JobState {}
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
 pub const ENUM_MIN_PAYLOAD: u8 = 0;
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
-pub const ENUM_MAX_PAYLOAD: u8 = 13;
+pub const ENUM_MAX_PAYLOAD: u8 = 23;
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
 #[allow(non_camel_case_types)]
-pub const ENUM_VALUES_PAYLOAD: [Payload; 14] = [
+pub const ENUM_VALUES_PAYLOAD: [Payload; 24] = [
   Payload::NONE,
   Payload::PingRequest,
   Payload::PingResponse,
@@ -603,6 +604,16 @@ pub const ENUM_VALUES_PAYLOAD: [Payload; 14] = [
   Payload::JobStatusRequest,
   Payload::JobStatusResponse,
   Payload::ErrorResponse,
+  Payload::DaemonStatusRequest,
+  Payload::DaemonStatusResponse,
+  Payload::ListJobsRequest,
+  Payload::ListJobsResponse,
+  Payload::NetworkStatusRequest,
+  Payload::NetworkStatusResponse,
+  Payload::WifiStatusRequest,
+  Payload::WifiStatusResponse,
+  Payload::WifiScanRequest,
+  Payload::WifiScanResponse,
 ];
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -624,9 +635,19 @@ impl Payload {
   pub const JobStatusRequest: Self = Self(11);
   pub const JobStatusResponse: Self = Self(12);
   pub const ErrorResponse: Self = Self(13);
+  pub const DaemonStatusRequest: Self = Self(14);
+  pub const DaemonStatusResponse: Self = Self(15);
+  pub const ListJobsRequest: Self = Self(16);
+  pub const ListJobsResponse: Self = Self(17);
+  pub const NetworkStatusRequest: Self = Self(18);
+  pub const NetworkStatusResponse: Self = Self(19);
+  pub const WifiStatusRequest: Self = Self(20);
+  pub const WifiStatusResponse: Self = Self(21);
+  pub const WifiScanRequest: Self = Self(22);
+  pub const WifiScanResponse: Self = Self(23);
 
   pub const ENUM_MIN: u8 = 0;
-  pub const ENUM_MAX: u8 = 13;
+  pub const ENUM_MAX: u8 = 23;
   pub const ENUM_VALUES: &'static [Self] = &[
     Self::NONE,
     Self::PingRequest,
@@ -642,6 +663,16 @@ impl Payload {
     Self::JobStatusRequest,
     Self::JobStatusResponse,
     Self::ErrorResponse,
+    Self::DaemonStatusRequest,
+    Self::DaemonStatusResponse,
+    Self::ListJobsRequest,
+    Self::ListJobsResponse,
+    Self::NetworkStatusRequest,
+    Self::NetworkStatusResponse,
+    Self::WifiStatusRequest,
+    Self::WifiStatusResponse,
+    Self::WifiScanRequest,
+    Self::WifiScanResponse,
   ];
   /// Returns the variant's name or "" if unknown.
   pub fn variant_name(self) -> Option<&'static str> {
@@ -660,6 +691,16 @@ impl Payload {
       Self::JobStatusRequest => Some("JobStatusRequest"),
       Self::JobStatusResponse => Some("JobStatusResponse"),
       Self::ErrorResponse => Some("ErrorResponse"),
+      Self::DaemonStatusRequest => Some("DaemonStatusRequest"),
+      Self::DaemonStatusResponse => Some("DaemonStatusResponse"),
+      Self::ListJobsRequest => Some("ListJobsRequest"),
+      Self::ListJobsResponse => Some("ListJobsResponse"),
+      Self::NetworkStatusRequest => Some("NetworkStatusRequest"),
+      Self::NetworkStatusResponse => Some("NetworkStatusResponse"),
+      Self::WifiStatusRequest => Some("WifiStatusRequest"),
+      Self::WifiStatusResponse => Some("WifiStatusResponse"),
+      Self::WifiScanRequest => Some("WifiScanRequest"),
+      Self::WifiScanResponse => Some("WifiScanResponse"),
       _ => None,
     }
   }
@@ -734,6 +775,16 @@ pub enum PayloadT {
   JobStatusRequest(alloc::boxed::Box<JobStatusRequestT>),
   JobStatusResponse(alloc::boxed::Box<JobStatusResponseT>),
   ErrorResponse(alloc::boxed::Box<ErrorResponseT>),
+  DaemonStatusRequest(alloc::boxed::Box<DaemonStatusRequestT>),
+  DaemonStatusResponse(alloc::boxed::Box<DaemonStatusResponseT>),
+  ListJobsRequest(alloc::boxed::Box<ListJobsRequestT>),
+  ListJobsResponse(alloc::boxed::Box<ListJobsResponseT>),
+  NetworkStatusRequest(alloc::boxed::Box<NetworkStatusRequestT>),
+  NetworkStatusResponse(alloc::boxed::Box<NetworkStatusResponseT>),
+  WifiStatusRequest(alloc::boxed::Box<WifiStatusRequestT>),
+  WifiStatusResponse(alloc::boxed::Box<WifiStatusResponseT>),
+  WifiScanRequest(alloc::boxed::Box<WifiScanRequestT>),
+  WifiScanResponse(alloc::boxed::Box<WifiScanResponseT>),
 }
 impl Default for PayloadT {
   fn default() -> Self {
@@ -757,6 +808,16 @@ impl PayloadT {
       Self::JobStatusRequest(_) => Payload::JobStatusRequest,
       Self::JobStatusResponse(_) => Payload::JobStatusResponse,
       Self::ErrorResponse(_) => Payload::ErrorResponse,
+      Self::DaemonStatusRequest(_) => Payload::DaemonStatusRequest,
+      Self::DaemonStatusResponse(_) => Payload::DaemonStatusResponse,
+      Self::ListJobsRequest(_) => Payload::ListJobsRequest,
+      Self::ListJobsResponse(_) => Payload::ListJobsResponse,
+      Self::NetworkStatusRequest(_) => Payload::NetworkStatusRequest,
+      Self::NetworkStatusResponse(_) => Payload::NetworkStatusResponse,
+      Self::WifiStatusRequest(_) => Payload::WifiStatusRequest,
+      Self::WifiStatusResponse(_) => Payload::WifiStatusResponse,
+      Self::WifiScanRequest(_) => Payload::WifiScanRequest,
+      Self::WifiScanResponse(_) => Payload::WifiScanResponse,
     }
   }
   pub fn pack<'b, A: ::flatbuffers::Allocator + 'b>(&self, fbb: &mut ::flatbuffers::FlatBufferBuilder<'b, A>) -> Option<::flatbuffers::WIPOffset<::flatbuffers::UnionWIPOffset>> {
@@ -775,6 +836,16 @@ impl PayloadT {
       Self::JobStatusRequest(v) => Some(v.pack(fbb).as_union_value()),
       Self::JobStatusResponse(v) => Some(v.pack(fbb).as_union_value()),
       Self::ErrorResponse(v) => Some(v.pack(fbb).as_union_value()),
+      Self::DaemonStatusRequest(v) => Some(v.pack(fbb).as_union_value()),
+      Self::DaemonStatusResponse(v) => Some(v.pack(fbb).as_union_value()),
+      Self::ListJobsRequest(v) => Some(v.pack(fbb).as_union_value()),
+      Self::ListJobsResponse(v) => Some(v.pack(fbb).as_union_value()),
+      Self::NetworkStatusRequest(v) => Some(v.pack(fbb).as_union_value()),
+      Self::NetworkStatusResponse(v) => Some(v.pack(fbb).as_union_value()),
+      Self::WifiStatusRequest(v) => Some(v.pack(fbb).as_union_value()),
+      Self::WifiStatusResponse(v) => Some(v.pack(fbb).as_union_value()),
+      Self::WifiScanRequest(v) => Some(v.pack(fbb).as_union_value()),
+      Self::WifiScanResponse(v) => Some(v.pack(fbb).as_union_value()),
     }
   }
   /// If the union variant matches, return the owned PingRequestT, setting the union to NONE.
@@ -1049,6 +1120,216 @@ impl PayloadT {
   /// If the union variant matches, return a mutable reference to the ErrorResponseT.
   pub fn as_error_response_mut(&mut self) -> Option<&mut ErrorResponseT> {
     if let Self::ErrorResponse(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned DaemonStatusRequestT, setting the union to NONE.
+  pub fn take_daemon_status_request(&mut self) -> Option<alloc::boxed::Box<DaemonStatusRequestT>> {
+    if let Self::DaemonStatusRequest(_) = self {
+      let v = ::core::mem::replace(self, Self::NONE);
+      if let Self::DaemonStatusRequest(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the DaemonStatusRequestT.
+  pub fn as_daemon_status_request(&self) -> Option<&DaemonStatusRequestT> {
+    if let Self::DaemonStatusRequest(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the DaemonStatusRequestT.
+  pub fn as_daemon_status_request_mut(&mut self) -> Option<&mut DaemonStatusRequestT> {
+    if let Self::DaemonStatusRequest(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned DaemonStatusResponseT, setting the union to NONE.
+  pub fn take_daemon_status_response(&mut self) -> Option<alloc::boxed::Box<DaemonStatusResponseT>> {
+    if let Self::DaemonStatusResponse(_) = self {
+      let v = ::core::mem::replace(self, Self::NONE);
+      if let Self::DaemonStatusResponse(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the DaemonStatusResponseT.
+  pub fn as_daemon_status_response(&self) -> Option<&DaemonStatusResponseT> {
+    if let Self::DaemonStatusResponse(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the DaemonStatusResponseT.
+  pub fn as_daemon_status_response_mut(&mut self) -> Option<&mut DaemonStatusResponseT> {
+    if let Self::DaemonStatusResponse(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned ListJobsRequestT, setting the union to NONE.
+  pub fn take_list_jobs_request(&mut self) -> Option<alloc::boxed::Box<ListJobsRequestT>> {
+    if let Self::ListJobsRequest(_) = self {
+      let v = ::core::mem::replace(self, Self::NONE);
+      if let Self::ListJobsRequest(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the ListJobsRequestT.
+  pub fn as_list_jobs_request(&self) -> Option<&ListJobsRequestT> {
+    if let Self::ListJobsRequest(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the ListJobsRequestT.
+  pub fn as_list_jobs_request_mut(&mut self) -> Option<&mut ListJobsRequestT> {
+    if let Self::ListJobsRequest(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned ListJobsResponseT, setting the union to NONE.
+  pub fn take_list_jobs_response(&mut self) -> Option<alloc::boxed::Box<ListJobsResponseT>> {
+    if let Self::ListJobsResponse(_) = self {
+      let v = ::core::mem::replace(self, Self::NONE);
+      if let Self::ListJobsResponse(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the ListJobsResponseT.
+  pub fn as_list_jobs_response(&self) -> Option<&ListJobsResponseT> {
+    if let Self::ListJobsResponse(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the ListJobsResponseT.
+  pub fn as_list_jobs_response_mut(&mut self) -> Option<&mut ListJobsResponseT> {
+    if let Self::ListJobsResponse(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned NetworkStatusRequestT, setting the union to NONE.
+  pub fn take_network_status_request(&mut self) -> Option<alloc::boxed::Box<NetworkStatusRequestT>> {
+    if let Self::NetworkStatusRequest(_) = self {
+      let v = ::core::mem::replace(self, Self::NONE);
+      if let Self::NetworkStatusRequest(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the NetworkStatusRequestT.
+  pub fn as_network_status_request(&self) -> Option<&NetworkStatusRequestT> {
+    if let Self::NetworkStatusRequest(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the NetworkStatusRequestT.
+  pub fn as_network_status_request_mut(&mut self) -> Option<&mut NetworkStatusRequestT> {
+    if let Self::NetworkStatusRequest(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned NetworkStatusResponseT, setting the union to NONE.
+  pub fn take_network_status_response(&mut self) -> Option<alloc::boxed::Box<NetworkStatusResponseT>> {
+    if let Self::NetworkStatusResponse(_) = self {
+      let v = ::core::mem::replace(self, Self::NONE);
+      if let Self::NetworkStatusResponse(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the NetworkStatusResponseT.
+  pub fn as_network_status_response(&self) -> Option<&NetworkStatusResponseT> {
+    if let Self::NetworkStatusResponse(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the NetworkStatusResponseT.
+  pub fn as_network_status_response_mut(&mut self) -> Option<&mut NetworkStatusResponseT> {
+    if let Self::NetworkStatusResponse(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned WifiStatusRequestT, setting the union to NONE.
+  pub fn take_wifi_status_request(&mut self) -> Option<alloc::boxed::Box<WifiStatusRequestT>> {
+    if let Self::WifiStatusRequest(_) = self {
+      let v = ::core::mem::replace(self, Self::NONE);
+      if let Self::WifiStatusRequest(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the WifiStatusRequestT.
+  pub fn as_wifi_status_request(&self) -> Option<&WifiStatusRequestT> {
+    if let Self::WifiStatusRequest(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the WifiStatusRequestT.
+  pub fn as_wifi_status_request_mut(&mut self) -> Option<&mut WifiStatusRequestT> {
+    if let Self::WifiStatusRequest(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned WifiStatusResponseT, setting the union to NONE.
+  pub fn take_wifi_status_response(&mut self) -> Option<alloc::boxed::Box<WifiStatusResponseT>> {
+    if let Self::WifiStatusResponse(_) = self {
+      let v = ::core::mem::replace(self, Self::NONE);
+      if let Self::WifiStatusResponse(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the WifiStatusResponseT.
+  pub fn as_wifi_status_response(&self) -> Option<&WifiStatusResponseT> {
+    if let Self::WifiStatusResponse(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the WifiStatusResponseT.
+  pub fn as_wifi_status_response_mut(&mut self) -> Option<&mut WifiStatusResponseT> {
+    if let Self::WifiStatusResponse(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned WifiScanRequestT, setting the union to NONE.
+  pub fn take_wifi_scan_request(&mut self) -> Option<alloc::boxed::Box<WifiScanRequestT>> {
+    if let Self::WifiScanRequest(_) = self {
+      let v = ::core::mem::replace(self, Self::NONE);
+      if let Self::WifiScanRequest(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the WifiScanRequestT.
+  pub fn as_wifi_scan_request(&self) -> Option<&WifiScanRequestT> {
+    if let Self::WifiScanRequest(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the WifiScanRequestT.
+  pub fn as_wifi_scan_request_mut(&mut self) -> Option<&mut WifiScanRequestT> {
+    if let Self::WifiScanRequest(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned WifiScanResponseT, setting the union to NONE.
+  pub fn take_wifi_scan_response(&mut self) -> Option<alloc::boxed::Box<WifiScanResponseT>> {
+    if let Self::WifiScanResponse(_) = self {
+      let v = ::core::mem::replace(self, Self::NONE);
+      if let Self::WifiScanResponse(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the WifiScanResponseT.
+  pub fn as_wifi_scan_response(&self) -> Option<&WifiScanResponseT> {
+    if let Self::WifiScanResponse(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the WifiScanResponseT.
+  pub fn as_wifi_scan_response_mut(&mut self) -> Option<&mut WifiScanResponseT> {
+    if let Self::WifiScanResponse(v) = self { Some(v.as_mut()) } else { None }
   }
 }
 pub enum PingRequestOffset {}
@@ -3906,6 +4187,2988 @@ impl JobStatusResponseT {
     })
   }
 }
+pub enum DaemonStatusRequestOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct DaemonStatusRequest<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for DaemonStatusRequest<'a> {
+  type Inner = DaemonStatusRequest<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> DaemonStatusRequest<'a> {
+
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "PENetplan.Ipc.DaemonStatusRequest"
+  }
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    DaemonStatusRequest { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    _args: &'args DaemonStatusRequestArgs
+  ) -> ::flatbuffers::WIPOffset<DaemonStatusRequest<'bldr>> {
+    let mut builder = DaemonStatusRequestBuilder::new(_fbb);
+    builder.finish()
+  }
+
+  pub fn unpack(&self) -> DaemonStatusRequestT {
+    DaemonStatusRequestT {
+    }
+  }
+}
+
+impl ::flatbuffers::Verifiable for DaemonStatusRequest<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct DaemonStatusRequestArgs {
+}
+impl<'a> Default for DaemonStatusRequestArgs {
+  #[inline]
+  fn default() -> Self {
+    DaemonStatusRequestArgs {
+    }
+  }
+}
+
+pub struct DaemonStatusRequestBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> DaemonStatusRequestBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> DaemonStatusRequestBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    DaemonStatusRequestBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<DaemonStatusRequest<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for DaemonStatusRequest<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("DaemonStatusRequest");
+      ds.finish()
+  }
+}
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct DaemonStatusRequestT {
+}
+impl Default for DaemonStatusRequestT {
+  fn default() -> Self {
+    Self {
+    }
+  }
+}
+impl DaemonStatusRequestT {
+  pub fn pack<'b, A: ::flatbuffers::Allocator + 'b>(
+    &self,
+    _fbb: &mut ::flatbuffers::FlatBufferBuilder<'b, A>
+  ) -> ::flatbuffers::WIPOffset<DaemonStatusRequest<'b>> {
+    DaemonStatusRequest::create(_fbb, &DaemonStatusRequestArgs{
+    })
+  }
+}
+pub enum DaemonStatusResponseOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct DaemonStatusResponse<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for DaemonStatusResponse<'a> {
+  type Inner = DaemonStatusResponse<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> DaemonStatusResponse<'a> {
+  pub const VT_DAEMON_VERSION: ::flatbuffers::VOffsetT = 4;
+  pub const VT_PROTOCOL_VERSION: ::flatbuffers::VOffsetT = 6;
+  pub const VT_STARTED_AT_UNIX_MS: ::flatbuffers::VOffsetT = 8;
+  pub const VT_UPTIME_MS: ::flatbuffers::VOffsetT = 10;
+  pub const VT_TOTAL_JOBS: ::flatbuffers::VOffsetT = 12;
+  pub const VT_QUEUED_JOBS: ::flatbuffers::VOffsetT = 14;
+  pub const VT_RUNNING_JOBS: ::flatbuffers::VOffsetT = 16;
+  pub const VT_SUCCEEDED_JOBS: ::flatbuffers::VOffsetT = 18;
+  pub const VT_FAILED_JOBS: ::flatbuffers::VOffsetT = 20;
+  pub const VT_ROLLED_BACK_JOBS: ::flatbuffers::VOffsetT = 22;
+
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "PENetplan.Ipc.DaemonStatusResponse"
+  }
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    DaemonStatusResponse { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args DaemonStatusResponseArgs<'args>
+  ) -> ::flatbuffers::WIPOffset<DaemonStatusResponse<'bldr>> {
+    let mut builder = DaemonStatusResponseBuilder::new(_fbb);
+    builder.add_uptime_ms(args.uptime_ms);
+    builder.add_started_at_unix_ms(args.started_at_unix_ms);
+    builder.add_rolled_back_jobs(args.rolled_back_jobs);
+    builder.add_failed_jobs(args.failed_jobs);
+    builder.add_succeeded_jobs(args.succeeded_jobs);
+    builder.add_running_jobs(args.running_jobs);
+    builder.add_queued_jobs(args.queued_jobs);
+    builder.add_total_jobs(args.total_jobs);
+    builder.add_protocol_version(args.protocol_version);
+    if let Some(x) = args.daemon_version { builder.add_daemon_version(x); }
+    builder.finish()
+  }
+
+  pub fn unpack(&self) -> DaemonStatusResponseT {
+    let daemon_version = {
+      let x = self.daemon_version();
+      alloc::string::ToString::to_string(x)
+    };
+    let protocol_version = self.protocol_version();
+    let started_at_unix_ms = self.started_at_unix_ms();
+    let uptime_ms = self.uptime_ms();
+    let total_jobs = self.total_jobs();
+    let queued_jobs = self.queued_jobs();
+    let running_jobs = self.running_jobs();
+    let succeeded_jobs = self.succeeded_jobs();
+    let failed_jobs = self.failed_jobs();
+    let rolled_back_jobs = self.rolled_back_jobs();
+    DaemonStatusResponseT {
+      daemon_version,
+      protocol_version,
+      started_at_unix_ms,
+      uptime_ms,
+      total_jobs,
+      queued_jobs,
+      running_jobs,
+      succeeded_jobs,
+      failed_jobs,
+      rolled_back_jobs,
+    }
+  }
+
+  #[inline]
+  pub fn daemon_version(&self) -> &'a str {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(DaemonStatusResponse::VT_DAEMON_VERSION, None).unwrap()}
+  }
+  #[inline]
+  pub fn protocol_version(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(DaemonStatusResponse::VT_PROTOCOL_VERSION, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn started_at_unix_ms(&self) -> u64 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u64>(DaemonStatusResponse::VT_STARTED_AT_UNIX_MS, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn uptime_ms(&self) -> u64 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u64>(DaemonStatusResponse::VT_UPTIME_MS, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn total_jobs(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(DaemonStatusResponse::VT_TOTAL_JOBS, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn queued_jobs(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(DaemonStatusResponse::VT_QUEUED_JOBS, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn running_jobs(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(DaemonStatusResponse::VT_RUNNING_JOBS, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn succeeded_jobs(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(DaemonStatusResponse::VT_SUCCEEDED_JOBS, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn failed_jobs(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(DaemonStatusResponse::VT_FAILED_JOBS, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn rolled_back_jobs(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(DaemonStatusResponse::VT_ROLLED_BACK_JOBS, Some(0)).unwrap()}
+  }
+}
+
+impl ::flatbuffers::Verifiable for DaemonStatusResponse<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("daemon_version", Self::VT_DAEMON_VERSION, true)?
+     .visit_field::<u32>("protocol_version", Self::VT_PROTOCOL_VERSION, false)?
+     .visit_field::<u64>("started_at_unix_ms", Self::VT_STARTED_AT_UNIX_MS, false)?
+     .visit_field::<u64>("uptime_ms", Self::VT_UPTIME_MS, false)?
+     .visit_field::<u32>("total_jobs", Self::VT_TOTAL_JOBS, false)?
+     .visit_field::<u32>("queued_jobs", Self::VT_QUEUED_JOBS, false)?
+     .visit_field::<u32>("running_jobs", Self::VT_RUNNING_JOBS, false)?
+     .visit_field::<u32>("succeeded_jobs", Self::VT_SUCCEEDED_JOBS, false)?
+     .visit_field::<u32>("failed_jobs", Self::VT_FAILED_JOBS, false)?
+     .visit_field::<u32>("rolled_back_jobs", Self::VT_ROLLED_BACK_JOBS, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct DaemonStatusResponseArgs<'a> {
+    pub daemon_version: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub protocol_version: u32,
+    pub started_at_unix_ms: u64,
+    pub uptime_ms: u64,
+    pub total_jobs: u32,
+    pub queued_jobs: u32,
+    pub running_jobs: u32,
+    pub succeeded_jobs: u32,
+    pub failed_jobs: u32,
+    pub rolled_back_jobs: u32,
+}
+impl<'a> Default for DaemonStatusResponseArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    DaemonStatusResponseArgs {
+      daemon_version: None, // required field
+      protocol_version: 0,
+      started_at_unix_ms: 0,
+      uptime_ms: 0,
+      total_jobs: 0,
+      queued_jobs: 0,
+      running_jobs: 0,
+      succeeded_jobs: 0,
+      failed_jobs: 0,
+      rolled_back_jobs: 0,
+    }
+  }
+}
+
+pub struct DaemonStatusResponseBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> DaemonStatusResponseBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_daemon_version(&mut self, daemon_version: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(DaemonStatusResponse::VT_DAEMON_VERSION, daemon_version);
+  }
+  #[inline]
+  pub fn add_protocol_version(&mut self, protocol_version: u32) {
+    self.fbb_.push_slot::<u32>(DaemonStatusResponse::VT_PROTOCOL_VERSION, protocol_version, 0);
+  }
+  #[inline]
+  pub fn add_started_at_unix_ms(&mut self, started_at_unix_ms: u64) {
+    self.fbb_.push_slot::<u64>(DaemonStatusResponse::VT_STARTED_AT_UNIX_MS, started_at_unix_ms, 0);
+  }
+  #[inline]
+  pub fn add_uptime_ms(&mut self, uptime_ms: u64) {
+    self.fbb_.push_slot::<u64>(DaemonStatusResponse::VT_UPTIME_MS, uptime_ms, 0);
+  }
+  #[inline]
+  pub fn add_total_jobs(&mut self, total_jobs: u32) {
+    self.fbb_.push_slot::<u32>(DaemonStatusResponse::VT_TOTAL_JOBS, total_jobs, 0);
+  }
+  #[inline]
+  pub fn add_queued_jobs(&mut self, queued_jobs: u32) {
+    self.fbb_.push_slot::<u32>(DaemonStatusResponse::VT_QUEUED_JOBS, queued_jobs, 0);
+  }
+  #[inline]
+  pub fn add_running_jobs(&mut self, running_jobs: u32) {
+    self.fbb_.push_slot::<u32>(DaemonStatusResponse::VT_RUNNING_JOBS, running_jobs, 0);
+  }
+  #[inline]
+  pub fn add_succeeded_jobs(&mut self, succeeded_jobs: u32) {
+    self.fbb_.push_slot::<u32>(DaemonStatusResponse::VT_SUCCEEDED_JOBS, succeeded_jobs, 0);
+  }
+  #[inline]
+  pub fn add_failed_jobs(&mut self, failed_jobs: u32) {
+    self.fbb_.push_slot::<u32>(DaemonStatusResponse::VT_FAILED_JOBS, failed_jobs, 0);
+  }
+  #[inline]
+  pub fn add_rolled_back_jobs(&mut self, rolled_back_jobs: u32) {
+    self.fbb_.push_slot::<u32>(DaemonStatusResponse::VT_ROLLED_BACK_JOBS, rolled_back_jobs, 0);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> DaemonStatusResponseBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    DaemonStatusResponseBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<DaemonStatusResponse<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    self.fbb_.required(o, DaemonStatusResponse::VT_DAEMON_VERSION,"daemon_version");
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for DaemonStatusResponse<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("DaemonStatusResponse");
+      ds.field("daemon_version", &self.daemon_version());
+      ds.field("protocol_version", &self.protocol_version());
+      ds.field("started_at_unix_ms", &self.started_at_unix_ms());
+      ds.field("uptime_ms", &self.uptime_ms());
+      ds.field("total_jobs", &self.total_jobs());
+      ds.field("queued_jobs", &self.queued_jobs());
+      ds.field("running_jobs", &self.running_jobs());
+      ds.field("succeeded_jobs", &self.succeeded_jobs());
+      ds.field("failed_jobs", &self.failed_jobs());
+      ds.field("rolled_back_jobs", &self.rolled_back_jobs());
+      ds.finish()
+  }
+}
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct DaemonStatusResponseT {
+  pub daemon_version: alloc::string::String,
+  pub protocol_version: u32,
+  pub started_at_unix_ms: u64,
+  pub uptime_ms: u64,
+  pub total_jobs: u32,
+  pub queued_jobs: u32,
+  pub running_jobs: u32,
+  pub succeeded_jobs: u32,
+  pub failed_jobs: u32,
+  pub rolled_back_jobs: u32,
+}
+impl Default for DaemonStatusResponseT {
+  fn default() -> Self {
+    Self {
+      daemon_version: alloc::string::ToString::to_string(""),
+      protocol_version: 0,
+      started_at_unix_ms: 0,
+      uptime_ms: 0,
+      total_jobs: 0,
+      queued_jobs: 0,
+      running_jobs: 0,
+      succeeded_jobs: 0,
+      failed_jobs: 0,
+      rolled_back_jobs: 0,
+    }
+  }
+}
+impl DaemonStatusResponseT {
+  pub fn pack<'b, A: ::flatbuffers::Allocator + 'b>(
+    &self,
+    _fbb: &mut ::flatbuffers::FlatBufferBuilder<'b, A>
+  ) -> ::flatbuffers::WIPOffset<DaemonStatusResponse<'b>> {
+    let daemon_version = Some({
+      let x = &self.daemon_version;
+      _fbb.create_string(x)
+    });
+    let protocol_version = self.protocol_version;
+    let started_at_unix_ms = self.started_at_unix_ms;
+    let uptime_ms = self.uptime_ms;
+    let total_jobs = self.total_jobs;
+    let queued_jobs = self.queued_jobs;
+    let running_jobs = self.running_jobs;
+    let succeeded_jobs = self.succeeded_jobs;
+    let failed_jobs = self.failed_jobs;
+    let rolled_back_jobs = self.rolled_back_jobs;
+    DaemonStatusResponse::create(_fbb, &DaemonStatusResponseArgs{
+      daemon_version,
+      protocol_version,
+      started_at_unix_ms,
+      uptime_ms,
+      total_jobs,
+      queued_jobs,
+      running_jobs,
+      succeeded_jobs,
+      failed_jobs,
+      rolled_back_jobs,
+    })
+  }
+}
+pub enum ListJobsRequestOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct ListJobsRequest<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for ListJobsRequest<'a> {
+  type Inner = ListJobsRequest<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> ListJobsRequest<'a> {
+  pub const VT_HAS_STATE: ::flatbuffers::VOffsetT = 4;
+  pub const VT_STATE: ::flatbuffers::VOffsetT = 6;
+  pub const VT_LIMIT: ::flatbuffers::VOffsetT = 8;
+
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "PENetplan.Ipc.ListJobsRequest"
+  }
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    ListJobsRequest { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args ListJobsRequestArgs
+  ) -> ::flatbuffers::WIPOffset<ListJobsRequest<'bldr>> {
+    let mut builder = ListJobsRequestBuilder::new(_fbb);
+    builder.add_limit(args.limit);
+    builder.add_state(args.state);
+    builder.add_has_state(args.has_state);
+    builder.finish()
+  }
+
+  pub fn unpack(&self) -> ListJobsRequestT {
+    let has_state = self.has_state();
+    let state = self.state();
+    let limit = self.limit();
+    ListJobsRequestT {
+      has_state,
+      state,
+      limit,
+    }
+  }
+
+  #[inline]
+  pub fn has_state(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(ListJobsRequest::VT_HAS_STATE, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn state(&self) -> JobState {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<JobState>(ListJobsRequest::VT_STATE, Some(JobState::Queued)).unwrap()}
+  }
+  #[inline]
+  pub fn limit(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(ListJobsRequest::VT_LIMIT, Some(100)).unwrap()}
+  }
+}
+
+impl ::flatbuffers::Verifiable for ListJobsRequest<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<bool>("has_state", Self::VT_HAS_STATE, false)?
+     .visit_field::<JobState>("state", Self::VT_STATE, false)?
+     .visit_field::<u32>("limit", Self::VT_LIMIT, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct ListJobsRequestArgs {
+    pub has_state: bool,
+    pub state: JobState,
+    pub limit: u32,
+}
+impl<'a> Default for ListJobsRequestArgs {
+  #[inline]
+  fn default() -> Self {
+    ListJobsRequestArgs {
+      has_state: false,
+      state: JobState::Queued,
+      limit: 100,
+    }
+  }
+}
+
+pub struct ListJobsRequestBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> ListJobsRequestBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_has_state(&mut self, has_state: bool) {
+    self.fbb_.push_slot::<bool>(ListJobsRequest::VT_HAS_STATE, has_state, false);
+  }
+  #[inline]
+  pub fn add_state(&mut self, state: JobState) {
+    self.fbb_.push_slot::<JobState>(ListJobsRequest::VT_STATE, state, JobState::Queued);
+  }
+  #[inline]
+  pub fn add_limit(&mut self, limit: u32) {
+    self.fbb_.push_slot::<u32>(ListJobsRequest::VT_LIMIT, limit, 100);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> ListJobsRequestBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    ListJobsRequestBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<ListJobsRequest<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for ListJobsRequest<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("ListJobsRequest");
+      ds.field("has_state", &self.has_state());
+      ds.field("state", &self.state());
+      ds.field("limit", &self.limit());
+      ds.finish()
+  }
+}
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct ListJobsRequestT {
+  pub has_state: bool,
+  pub state: JobState,
+  pub limit: u32,
+}
+impl Default for ListJobsRequestT {
+  fn default() -> Self {
+    Self {
+      has_state: false,
+      state: JobState::Queued,
+      limit: 100,
+    }
+  }
+}
+impl ListJobsRequestT {
+  pub fn pack<'b, A: ::flatbuffers::Allocator + 'b>(
+    &self,
+    _fbb: &mut ::flatbuffers::FlatBufferBuilder<'b, A>
+  ) -> ::flatbuffers::WIPOffset<ListJobsRequest<'b>> {
+    let has_state = self.has_state;
+    let state = self.state;
+    let limit = self.limit;
+    ListJobsRequest::create(_fbb, &ListJobsRequestArgs{
+      has_state,
+      state,
+      limit,
+    })
+  }
+}
+pub enum JobSummaryOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct JobSummary<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for JobSummary<'a> {
+  type Inner = JobSummary<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> JobSummary<'a> {
+  pub const VT_JOB_ID: ::flatbuffers::VOffsetT = 4;
+  pub const VT_STATE: ::flatbuffers::VOffsetT = 6;
+  pub const VT_MESSAGE: ::flatbuffers::VOffsetT = 8;
+  pub const VT_CREATED_AT_UNIX_MS: ::flatbuffers::VOffsetT = 10;
+  pub const VT_UPDATED_AT_UNIX_MS: ::flatbuffers::VOffsetT = 12;
+
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "PENetplan.Ipc.JobSummary"
+  }
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    JobSummary { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args JobSummaryArgs<'args>
+  ) -> ::flatbuffers::WIPOffset<JobSummary<'bldr>> {
+    let mut builder = JobSummaryBuilder::new(_fbb);
+    builder.add_updated_at_unix_ms(args.updated_at_unix_ms);
+    builder.add_created_at_unix_ms(args.created_at_unix_ms);
+    if let Some(x) = args.message { builder.add_message(x); }
+    if let Some(x) = args.job_id { builder.add_job_id(x); }
+    builder.add_state(args.state);
+    builder.finish()
+  }
+
+  pub fn unpack(&self) -> JobSummaryT {
+    let job_id = {
+      let x = self.job_id();
+      alloc::string::ToString::to_string(x)
+    };
+    let state = self.state();
+    let message = self.message().map(|x| {
+      alloc::string::ToString::to_string(x)
+    });
+    let created_at_unix_ms = self.created_at_unix_ms();
+    let updated_at_unix_ms = self.updated_at_unix_ms();
+    JobSummaryT {
+      job_id,
+      state,
+      message,
+      created_at_unix_ms,
+      updated_at_unix_ms,
+    }
+  }
+
+  #[inline]
+  pub fn job_id(&self) -> &'a str {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(JobSummary::VT_JOB_ID, None).unwrap()}
+  }
+  #[inline]
+  pub fn state(&self) -> JobState {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<JobState>(JobSummary::VT_STATE, Some(JobState::Queued)).unwrap()}
+  }
+  #[inline]
+  pub fn message(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(JobSummary::VT_MESSAGE, None)}
+  }
+  #[inline]
+  pub fn created_at_unix_ms(&self) -> u64 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u64>(JobSummary::VT_CREATED_AT_UNIX_MS, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn updated_at_unix_ms(&self) -> u64 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u64>(JobSummary::VT_UPDATED_AT_UNIX_MS, Some(0)).unwrap()}
+  }
+}
+
+impl ::flatbuffers::Verifiable for JobSummary<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("job_id", Self::VT_JOB_ID, true)?
+     .visit_field::<JobState>("state", Self::VT_STATE, false)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("message", Self::VT_MESSAGE, false)?
+     .visit_field::<u64>("created_at_unix_ms", Self::VT_CREATED_AT_UNIX_MS, false)?
+     .visit_field::<u64>("updated_at_unix_ms", Self::VT_UPDATED_AT_UNIX_MS, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct JobSummaryArgs<'a> {
+    pub job_id: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub state: JobState,
+    pub message: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub created_at_unix_ms: u64,
+    pub updated_at_unix_ms: u64,
+}
+impl<'a> Default for JobSummaryArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    JobSummaryArgs {
+      job_id: None, // required field
+      state: JobState::Queued,
+      message: None,
+      created_at_unix_ms: 0,
+      updated_at_unix_ms: 0,
+    }
+  }
+}
+
+pub struct JobSummaryBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> JobSummaryBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_job_id(&mut self, job_id: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(JobSummary::VT_JOB_ID, job_id);
+  }
+  #[inline]
+  pub fn add_state(&mut self, state: JobState) {
+    self.fbb_.push_slot::<JobState>(JobSummary::VT_STATE, state, JobState::Queued);
+  }
+  #[inline]
+  pub fn add_message(&mut self, message: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(JobSummary::VT_MESSAGE, message);
+  }
+  #[inline]
+  pub fn add_created_at_unix_ms(&mut self, created_at_unix_ms: u64) {
+    self.fbb_.push_slot::<u64>(JobSummary::VT_CREATED_AT_UNIX_MS, created_at_unix_ms, 0);
+  }
+  #[inline]
+  pub fn add_updated_at_unix_ms(&mut self, updated_at_unix_ms: u64) {
+    self.fbb_.push_slot::<u64>(JobSummary::VT_UPDATED_AT_UNIX_MS, updated_at_unix_ms, 0);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> JobSummaryBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    JobSummaryBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<JobSummary<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    self.fbb_.required(o, JobSummary::VT_JOB_ID,"job_id");
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for JobSummary<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("JobSummary");
+      ds.field("job_id", &self.job_id());
+      ds.field("state", &self.state());
+      ds.field("message", &self.message());
+      ds.field("created_at_unix_ms", &self.created_at_unix_ms());
+      ds.field("updated_at_unix_ms", &self.updated_at_unix_ms());
+      ds.finish()
+  }
+}
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct JobSummaryT {
+  pub job_id: alloc::string::String,
+  pub state: JobState,
+  pub message: Option<alloc::string::String>,
+  pub created_at_unix_ms: u64,
+  pub updated_at_unix_ms: u64,
+}
+impl Default for JobSummaryT {
+  fn default() -> Self {
+    Self {
+      job_id: alloc::string::ToString::to_string(""),
+      state: JobState::Queued,
+      message: None,
+      created_at_unix_ms: 0,
+      updated_at_unix_ms: 0,
+    }
+  }
+}
+impl JobSummaryT {
+  pub fn pack<'b, A: ::flatbuffers::Allocator + 'b>(
+    &self,
+    _fbb: &mut ::flatbuffers::FlatBufferBuilder<'b, A>
+  ) -> ::flatbuffers::WIPOffset<JobSummary<'b>> {
+    let job_id = Some({
+      let x = &self.job_id;
+      _fbb.create_string(x)
+    });
+    let state = self.state;
+    let message = self.message.as_ref().map(|x|{
+      _fbb.create_string(x)
+    });
+    let created_at_unix_ms = self.created_at_unix_ms;
+    let updated_at_unix_ms = self.updated_at_unix_ms;
+    JobSummary::create(_fbb, &JobSummaryArgs{
+      job_id,
+      state,
+      message,
+      created_at_unix_ms,
+      updated_at_unix_ms,
+    })
+  }
+}
+pub enum ListJobsResponseOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct ListJobsResponse<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for ListJobsResponse<'a> {
+  type Inner = ListJobsResponse<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> ListJobsResponse<'a> {
+  pub const VT_JOBS: ::flatbuffers::VOffsetT = 4;
+  pub const VT_TOTAL: ::flatbuffers::VOffsetT = 6;
+
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "PENetplan.Ipc.ListJobsResponse"
+  }
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    ListJobsResponse { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args ListJobsResponseArgs<'args>
+  ) -> ::flatbuffers::WIPOffset<ListJobsResponse<'bldr>> {
+    let mut builder = ListJobsResponseBuilder::new(_fbb);
+    builder.add_total(args.total);
+    if let Some(x) = args.jobs { builder.add_jobs(x); }
+    builder.finish()
+  }
+
+  pub fn unpack(&self) -> ListJobsResponseT {
+    let jobs = {
+      let x = self.jobs();
+      x.iter().map(|t| t.unpack()).collect()
+    };
+    let total = self.total();
+    ListJobsResponseT {
+      jobs,
+      total,
+    }
+  }
+
+  #[inline]
+  pub fn jobs(&self) -> ::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<JobSummary<'a>>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<JobSummary>>>>(ListJobsResponse::VT_JOBS, None).unwrap()}
+  }
+  #[inline]
+  pub fn total(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(ListJobsResponse::VT_TOTAL, Some(0)).unwrap()}
+  }
+}
+
+impl ::flatbuffers::Verifiable for ListJobsResponse<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'_, ::flatbuffers::ForwardsUOffset<JobSummary>>>>("jobs", Self::VT_JOBS, true)?
+     .visit_field::<u32>("total", Self::VT_TOTAL, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct ListJobsResponseArgs<'a> {
+    pub jobs: Option<::flatbuffers::WIPOffset<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<JobSummary<'a>>>>>,
+    pub total: u32,
+}
+impl<'a> Default for ListJobsResponseArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    ListJobsResponseArgs {
+      jobs: None, // required field
+      total: 0,
+    }
+  }
+}
+
+pub struct ListJobsResponseBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> ListJobsResponseBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_jobs(&mut self, jobs: ::flatbuffers::WIPOffset<::flatbuffers::Vector<'b , ::flatbuffers::ForwardsUOffset<JobSummary<'b >>>>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(ListJobsResponse::VT_JOBS, jobs);
+  }
+  #[inline]
+  pub fn add_total(&mut self, total: u32) {
+    self.fbb_.push_slot::<u32>(ListJobsResponse::VT_TOTAL, total, 0);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> ListJobsResponseBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    ListJobsResponseBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<ListJobsResponse<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    self.fbb_.required(o, ListJobsResponse::VT_JOBS,"jobs");
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for ListJobsResponse<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("ListJobsResponse");
+      ds.field("jobs", &self.jobs());
+      ds.field("total", &self.total());
+      ds.finish()
+  }
+}
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct ListJobsResponseT {
+  pub jobs: alloc::vec::Vec<JobSummaryT>,
+  pub total: u32,
+}
+impl Default for ListJobsResponseT {
+  fn default() -> Self {
+    Self {
+      jobs: Default::default(),
+      total: 0,
+    }
+  }
+}
+impl ListJobsResponseT {
+  pub fn pack<'b, A: ::flatbuffers::Allocator + 'b>(
+    &self,
+    _fbb: &mut ::flatbuffers::FlatBufferBuilder<'b, A>
+  ) -> ::flatbuffers::WIPOffset<ListJobsResponse<'b>> {
+    let jobs = Some({
+      let x = &self.jobs;
+      let w: alloc::vec::Vec<_> = x.iter().map(|t| t.pack(_fbb)).collect();_fbb.create_vector(&w)
+    });
+    let total = self.total;
+    ListJobsResponse::create(_fbb, &ListJobsResponseArgs{
+      jobs,
+      total,
+    })
+  }
+}
+pub enum NetworkStatusRequestOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct NetworkStatusRequest<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for NetworkStatusRequest<'a> {
+  type Inner = NetworkStatusRequest<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> NetworkStatusRequest<'a> {
+
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "PENetplan.Ipc.NetworkStatusRequest"
+  }
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    NetworkStatusRequest { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    _args: &'args NetworkStatusRequestArgs
+  ) -> ::flatbuffers::WIPOffset<NetworkStatusRequest<'bldr>> {
+    let mut builder = NetworkStatusRequestBuilder::new(_fbb);
+    builder.finish()
+  }
+
+  pub fn unpack(&self) -> NetworkStatusRequestT {
+    NetworkStatusRequestT {
+    }
+  }
+}
+
+impl ::flatbuffers::Verifiable for NetworkStatusRequest<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct NetworkStatusRequestArgs {
+}
+impl<'a> Default for NetworkStatusRequestArgs {
+  #[inline]
+  fn default() -> Self {
+    NetworkStatusRequestArgs {
+    }
+  }
+}
+
+pub struct NetworkStatusRequestBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> NetworkStatusRequestBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> NetworkStatusRequestBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    NetworkStatusRequestBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<NetworkStatusRequest<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for NetworkStatusRequest<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("NetworkStatusRequest");
+      ds.finish()
+  }
+}
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct NetworkStatusRequestT {
+}
+impl Default for NetworkStatusRequestT {
+  fn default() -> Self {
+    Self {
+    }
+  }
+}
+impl NetworkStatusRequestT {
+  pub fn pack<'b, A: ::flatbuffers::Allocator + 'b>(
+    &self,
+    _fbb: &mut ::flatbuffers::FlatBufferBuilder<'b, A>
+  ) -> ::flatbuffers::WIPOffset<NetworkStatusRequest<'b>> {
+    NetworkStatusRequest::create(_fbb, &NetworkStatusRequestArgs{
+    })
+  }
+}
+pub enum WifiStatusRequestOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct WifiStatusRequest<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for WifiStatusRequest<'a> {
+  type Inner = WifiStatusRequest<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> WifiStatusRequest<'a> {
+  pub const VT_HAS_IF_INDEX: ::flatbuffers::VOffsetT = 4;
+  pub const VT_IF_INDEX: ::flatbuffers::VOffsetT = 6;
+
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "PENetplan.Ipc.WifiStatusRequest"
+  }
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    WifiStatusRequest { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args WifiStatusRequestArgs
+  ) -> ::flatbuffers::WIPOffset<WifiStatusRequest<'bldr>> {
+    let mut builder = WifiStatusRequestBuilder::new(_fbb);
+    builder.add_if_index(args.if_index);
+    builder.add_has_if_index(args.has_if_index);
+    builder.finish()
+  }
+
+  pub fn unpack(&self) -> WifiStatusRequestT {
+    let has_if_index = self.has_if_index();
+    let if_index = self.if_index();
+    WifiStatusRequestT {
+      has_if_index,
+      if_index,
+    }
+  }
+
+  #[inline]
+  pub fn has_if_index(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(WifiStatusRequest::VT_HAS_IF_INDEX, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn if_index(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(WifiStatusRequest::VT_IF_INDEX, Some(0)).unwrap()}
+  }
+}
+
+impl ::flatbuffers::Verifiable for WifiStatusRequest<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<bool>("has_if_index", Self::VT_HAS_IF_INDEX, false)?
+     .visit_field::<u32>("if_index", Self::VT_IF_INDEX, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct WifiStatusRequestArgs {
+    pub has_if_index: bool,
+    pub if_index: u32,
+}
+impl<'a> Default for WifiStatusRequestArgs {
+  #[inline]
+  fn default() -> Self {
+    WifiStatusRequestArgs {
+      has_if_index: false,
+      if_index: 0,
+    }
+  }
+}
+
+pub struct WifiStatusRequestBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> WifiStatusRequestBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_has_if_index(&mut self, has_if_index: bool) {
+    self.fbb_.push_slot::<bool>(WifiStatusRequest::VT_HAS_IF_INDEX, has_if_index, false);
+  }
+  #[inline]
+  pub fn add_if_index(&mut self, if_index: u32) {
+    self.fbb_.push_slot::<u32>(WifiStatusRequest::VT_IF_INDEX, if_index, 0);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> WifiStatusRequestBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    WifiStatusRequestBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<WifiStatusRequest<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for WifiStatusRequest<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("WifiStatusRequest");
+      ds.field("has_if_index", &self.has_if_index());
+      ds.field("if_index", &self.if_index());
+      ds.finish()
+  }
+}
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct WifiStatusRequestT {
+  pub has_if_index: bool,
+  pub if_index: u32,
+}
+impl Default for WifiStatusRequestT {
+  fn default() -> Self {
+    Self {
+      has_if_index: false,
+      if_index: 0,
+    }
+  }
+}
+impl WifiStatusRequestT {
+  pub fn pack<'b, A: ::flatbuffers::Allocator + 'b>(
+    &self,
+    _fbb: &mut ::flatbuffers::FlatBufferBuilder<'b, A>
+  ) -> ::flatbuffers::WIPOffset<WifiStatusRequest<'b>> {
+    let has_if_index = self.has_if_index;
+    let if_index = self.if_index;
+    WifiStatusRequest::create(_fbb, &WifiStatusRequestArgs{
+      has_if_index,
+      if_index,
+    })
+  }
+}
+pub enum WifiScanRequestOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct WifiScanRequest<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for WifiScanRequest<'a> {
+  type Inner = WifiScanRequest<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> WifiScanRequest<'a> {
+  pub const VT_HAS_IF_INDEX: ::flatbuffers::VOffsetT = 4;
+  pub const VT_IF_INDEX: ::flatbuffers::VOffsetT = 6;
+  pub const VT_REFRESH: ::flatbuffers::VOffsetT = 8;
+  pub const VT_TIMEOUT_MS: ::flatbuffers::VOffsetT = 10;
+
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "PENetplan.Ipc.WifiScanRequest"
+  }
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    WifiScanRequest { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args WifiScanRequestArgs
+  ) -> ::flatbuffers::WIPOffset<WifiScanRequest<'bldr>> {
+    let mut builder = WifiScanRequestBuilder::new(_fbb);
+    builder.add_timeout_ms(args.timeout_ms);
+    builder.add_if_index(args.if_index);
+    builder.add_refresh(args.refresh);
+    builder.add_has_if_index(args.has_if_index);
+    builder.finish()
+  }
+
+  pub fn unpack(&self) -> WifiScanRequestT {
+    let has_if_index = self.has_if_index();
+    let if_index = self.if_index();
+    let refresh = self.refresh();
+    let timeout_ms = self.timeout_ms();
+    WifiScanRequestT {
+      has_if_index,
+      if_index,
+      refresh,
+      timeout_ms,
+    }
+  }
+
+  #[inline]
+  pub fn has_if_index(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(WifiScanRequest::VT_HAS_IF_INDEX, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn if_index(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(WifiScanRequest::VT_IF_INDEX, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn refresh(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(WifiScanRequest::VT_REFRESH, Some(true)).unwrap()}
+  }
+  #[inline]
+  pub fn timeout_ms(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(WifiScanRequest::VT_TIMEOUT_MS, Some(4000)).unwrap()}
+  }
+}
+
+impl ::flatbuffers::Verifiable for WifiScanRequest<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<bool>("has_if_index", Self::VT_HAS_IF_INDEX, false)?
+     .visit_field::<u32>("if_index", Self::VT_IF_INDEX, false)?
+     .visit_field::<bool>("refresh", Self::VT_REFRESH, false)?
+     .visit_field::<u32>("timeout_ms", Self::VT_TIMEOUT_MS, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct WifiScanRequestArgs {
+    pub has_if_index: bool,
+    pub if_index: u32,
+    pub refresh: bool,
+    pub timeout_ms: u32,
+}
+impl<'a> Default for WifiScanRequestArgs {
+  #[inline]
+  fn default() -> Self {
+    WifiScanRequestArgs {
+      has_if_index: false,
+      if_index: 0,
+      refresh: true,
+      timeout_ms: 4000,
+    }
+  }
+}
+
+pub struct WifiScanRequestBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> WifiScanRequestBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_has_if_index(&mut self, has_if_index: bool) {
+    self.fbb_.push_slot::<bool>(WifiScanRequest::VT_HAS_IF_INDEX, has_if_index, false);
+  }
+  #[inline]
+  pub fn add_if_index(&mut self, if_index: u32) {
+    self.fbb_.push_slot::<u32>(WifiScanRequest::VT_IF_INDEX, if_index, 0);
+  }
+  #[inline]
+  pub fn add_refresh(&mut self, refresh: bool) {
+    self.fbb_.push_slot::<bool>(WifiScanRequest::VT_REFRESH, refresh, true);
+  }
+  #[inline]
+  pub fn add_timeout_ms(&mut self, timeout_ms: u32) {
+    self.fbb_.push_slot::<u32>(WifiScanRequest::VT_TIMEOUT_MS, timeout_ms, 4000);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> WifiScanRequestBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    WifiScanRequestBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<WifiScanRequest<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for WifiScanRequest<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("WifiScanRequest");
+      ds.field("has_if_index", &self.has_if_index());
+      ds.field("if_index", &self.if_index());
+      ds.field("refresh", &self.refresh());
+      ds.field("timeout_ms", &self.timeout_ms());
+      ds.finish()
+  }
+}
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct WifiScanRequestT {
+  pub has_if_index: bool,
+  pub if_index: u32,
+  pub refresh: bool,
+  pub timeout_ms: u32,
+}
+impl Default for WifiScanRequestT {
+  fn default() -> Self {
+    Self {
+      has_if_index: false,
+      if_index: 0,
+      refresh: true,
+      timeout_ms: 4000,
+    }
+  }
+}
+impl WifiScanRequestT {
+  pub fn pack<'b, A: ::flatbuffers::Allocator + 'b>(
+    &self,
+    _fbb: &mut ::flatbuffers::FlatBufferBuilder<'b, A>
+  ) -> ::flatbuffers::WIPOffset<WifiScanRequest<'b>> {
+    let has_if_index = self.has_if_index;
+    let if_index = self.if_index;
+    let refresh = self.refresh;
+    let timeout_ms = self.timeout_ms;
+    WifiScanRequest::create(_fbb, &WifiScanRequestArgs{
+      has_if_index,
+      if_index,
+      refresh,
+      timeout_ms,
+    })
+  }
+}
+pub enum WifiInterfaceStatusOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct WifiInterfaceStatus<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for WifiInterfaceStatus<'a> {
+  type Inner = WifiInterfaceStatus<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> WifiInterfaceStatus<'a> {
+  pub const VT_IF_INDEX: ::flatbuffers::VOffsetT = 4;
+  pub const VT_NAME: ::flatbuffers::VOffsetT = 6;
+  pub const VT_GUID: ::flatbuffers::VOffsetT = 8;
+  pub const VT_STATE: ::flatbuffers::VOffsetT = 10;
+  pub const VT_PROFILE_NAME: ::flatbuffers::VOffsetT = 12;
+  pub const VT_SSID: ::flatbuffers::VOffsetT = 14;
+  pub const VT_SSID_HEX: ::flatbuffers::VOffsetT = 16;
+  pub const VT_HAS_SIGNAL_QUALITY: ::flatbuffers::VOffsetT = 18;
+  pub const VT_SIGNAL_QUALITY: ::flatbuffers::VOffsetT = 20;
+  pub const VT_HAS_SECURITY_ENABLED: ::flatbuffers::VOffsetT = 22;
+  pub const VT_SECURITY_ENABLED: ::flatbuffers::VOffsetT = 24;
+  pub const VT_AUTHENTICATION: ::flatbuffers::VOffsetT = 26;
+  pub const VT_CIPHER: ::flatbuffers::VOffsetT = 28;
+  pub const VT_HAS_RX_RATE_KBPS: ::flatbuffers::VOffsetT = 30;
+  pub const VT_RX_RATE_KBPS: ::flatbuffers::VOffsetT = 32;
+  pub const VT_HAS_TX_RATE_KBPS: ::flatbuffers::VOffsetT = 34;
+  pub const VT_TX_RATE_KBPS: ::flatbuffers::VOffsetT = 36;
+
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "PENetplan.Ipc.WifiInterfaceStatus"
+  }
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    WifiInterfaceStatus { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args WifiInterfaceStatusArgs<'args>
+  ) -> ::flatbuffers::WIPOffset<WifiInterfaceStatus<'bldr>> {
+    let mut builder = WifiInterfaceStatusBuilder::new(_fbb);
+    builder.add_tx_rate_kbps(args.tx_rate_kbps);
+    builder.add_rx_rate_kbps(args.rx_rate_kbps);
+    if let Some(x) = args.cipher { builder.add_cipher(x); }
+    if let Some(x) = args.authentication { builder.add_authentication(x); }
+    if let Some(x) = args.ssid_hex { builder.add_ssid_hex(x); }
+    if let Some(x) = args.ssid { builder.add_ssid(x); }
+    if let Some(x) = args.profile_name { builder.add_profile_name(x); }
+    if let Some(x) = args.state { builder.add_state(x); }
+    if let Some(x) = args.guid { builder.add_guid(x); }
+    if let Some(x) = args.name { builder.add_name(x); }
+    builder.add_if_index(args.if_index);
+    builder.add_has_tx_rate_kbps(args.has_tx_rate_kbps);
+    builder.add_has_rx_rate_kbps(args.has_rx_rate_kbps);
+    builder.add_security_enabled(args.security_enabled);
+    builder.add_has_security_enabled(args.has_security_enabled);
+    builder.add_signal_quality(args.signal_quality);
+    builder.add_has_signal_quality(args.has_signal_quality);
+    builder.finish()
+  }
+
+  pub fn unpack(&self) -> WifiInterfaceStatusT {
+    let if_index = self.if_index();
+    let name = {
+      let x = self.name();
+      alloc::string::ToString::to_string(x)
+    };
+    let guid = self.guid().map(|x| {
+      alloc::string::ToString::to_string(x)
+    });
+    let state = {
+      let x = self.state();
+      alloc::string::ToString::to_string(x)
+    };
+    let profile_name = self.profile_name().map(|x| {
+      alloc::string::ToString::to_string(x)
+    });
+    let ssid = self.ssid().map(|x| {
+      alloc::string::ToString::to_string(x)
+    });
+    let ssid_hex = self.ssid_hex().map(|x| {
+      alloc::string::ToString::to_string(x)
+    });
+    let has_signal_quality = self.has_signal_quality();
+    let signal_quality = self.signal_quality();
+    let has_security_enabled = self.has_security_enabled();
+    let security_enabled = self.security_enabled();
+    let authentication = self.authentication().map(|x| {
+      alloc::string::ToString::to_string(x)
+    });
+    let cipher = self.cipher().map(|x| {
+      alloc::string::ToString::to_string(x)
+    });
+    let has_rx_rate_kbps = self.has_rx_rate_kbps();
+    let rx_rate_kbps = self.rx_rate_kbps();
+    let has_tx_rate_kbps = self.has_tx_rate_kbps();
+    let tx_rate_kbps = self.tx_rate_kbps();
+    WifiInterfaceStatusT {
+      if_index,
+      name,
+      guid,
+      state,
+      profile_name,
+      ssid,
+      ssid_hex,
+      has_signal_quality,
+      signal_quality,
+      has_security_enabled,
+      security_enabled,
+      authentication,
+      cipher,
+      has_rx_rate_kbps,
+      rx_rate_kbps,
+      has_tx_rate_kbps,
+      tx_rate_kbps,
+    }
+  }
+
+  #[inline]
+  pub fn if_index(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(WifiInterfaceStatus::VT_IF_INDEX, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn name(&self) -> &'a str {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(WifiInterfaceStatus::VT_NAME, None).unwrap()}
+  }
+  #[inline]
+  pub fn guid(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(WifiInterfaceStatus::VT_GUID, None)}
+  }
+  #[inline]
+  pub fn state(&self) -> &'a str {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(WifiInterfaceStatus::VT_STATE, None).unwrap()}
+  }
+  #[inline]
+  pub fn profile_name(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(WifiInterfaceStatus::VT_PROFILE_NAME, None)}
+  }
+  #[inline]
+  pub fn ssid(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(WifiInterfaceStatus::VT_SSID, None)}
+  }
+  #[inline]
+  pub fn ssid_hex(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(WifiInterfaceStatus::VT_SSID_HEX, None)}
+  }
+  #[inline]
+  pub fn has_signal_quality(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(WifiInterfaceStatus::VT_HAS_SIGNAL_QUALITY, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn signal_quality(&self) -> u8 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u8>(WifiInterfaceStatus::VT_SIGNAL_QUALITY, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn has_security_enabled(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(WifiInterfaceStatus::VT_HAS_SECURITY_ENABLED, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn security_enabled(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(WifiInterfaceStatus::VT_SECURITY_ENABLED, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn authentication(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(WifiInterfaceStatus::VT_AUTHENTICATION, None)}
+  }
+  #[inline]
+  pub fn cipher(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(WifiInterfaceStatus::VT_CIPHER, None)}
+  }
+  #[inline]
+  pub fn has_rx_rate_kbps(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(WifiInterfaceStatus::VT_HAS_RX_RATE_KBPS, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn rx_rate_kbps(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(WifiInterfaceStatus::VT_RX_RATE_KBPS, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn has_tx_rate_kbps(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(WifiInterfaceStatus::VT_HAS_TX_RATE_KBPS, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn tx_rate_kbps(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(WifiInterfaceStatus::VT_TX_RATE_KBPS, Some(0)).unwrap()}
+  }
+}
+
+impl ::flatbuffers::Verifiable for WifiInterfaceStatus<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<u32>("if_index", Self::VT_IF_INDEX, false)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("name", Self::VT_NAME, true)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("guid", Self::VT_GUID, false)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("state", Self::VT_STATE, true)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("profile_name", Self::VT_PROFILE_NAME, false)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("ssid", Self::VT_SSID, false)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("ssid_hex", Self::VT_SSID_HEX, false)?
+     .visit_field::<bool>("has_signal_quality", Self::VT_HAS_SIGNAL_QUALITY, false)?
+     .visit_field::<u8>("signal_quality", Self::VT_SIGNAL_QUALITY, false)?
+     .visit_field::<bool>("has_security_enabled", Self::VT_HAS_SECURITY_ENABLED, false)?
+     .visit_field::<bool>("security_enabled", Self::VT_SECURITY_ENABLED, false)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("authentication", Self::VT_AUTHENTICATION, false)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("cipher", Self::VT_CIPHER, false)?
+     .visit_field::<bool>("has_rx_rate_kbps", Self::VT_HAS_RX_RATE_KBPS, false)?
+     .visit_field::<u32>("rx_rate_kbps", Self::VT_RX_RATE_KBPS, false)?
+     .visit_field::<bool>("has_tx_rate_kbps", Self::VT_HAS_TX_RATE_KBPS, false)?
+     .visit_field::<u32>("tx_rate_kbps", Self::VT_TX_RATE_KBPS, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct WifiInterfaceStatusArgs<'a> {
+    pub if_index: u32,
+    pub name: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub guid: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub state: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub profile_name: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub ssid: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub ssid_hex: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub has_signal_quality: bool,
+    pub signal_quality: u8,
+    pub has_security_enabled: bool,
+    pub security_enabled: bool,
+    pub authentication: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub cipher: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub has_rx_rate_kbps: bool,
+    pub rx_rate_kbps: u32,
+    pub has_tx_rate_kbps: bool,
+    pub tx_rate_kbps: u32,
+}
+impl<'a> Default for WifiInterfaceStatusArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    WifiInterfaceStatusArgs {
+      if_index: 0,
+      name: None, // required field
+      guid: None,
+      state: None, // required field
+      profile_name: None,
+      ssid: None,
+      ssid_hex: None,
+      has_signal_quality: false,
+      signal_quality: 0,
+      has_security_enabled: false,
+      security_enabled: false,
+      authentication: None,
+      cipher: None,
+      has_rx_rate_kbps: false,
+      rx_rate_kbps: 0,
+      has_tx_rate_kbps: false,
+      tx_rate_kbps: 0,
+    }
+  }
+}
+
+pub struct WifiInterfaceStatusBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> WifiInterfaceStatusBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_if_index(&mut self, if_index: u32) {
+    self.fbb_.push_slot::<u32>(WifiInterfaceStatus::VT_IF_INDEX, if_index, 0);
+  }
+  #[inline]
+  pub fn add_name(&mut self, name: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WifiInterfaceStatus::VT_NAME, name);
+  }
+  #[inline]
+  pub fn add_guid(&mut self, guid: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WifiInterfaceStatus::VT_GUID, guid);
+  }
+  #[inline]
+  pub fn add_state(&mut self, state: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WifiInterfaceStatus::VT_STATE, state);
+  }
+  #[inline]
+  pub fn add_profile_name(&mut self, profile_name: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WifiInterfaceStatus::VT_PROFILE_NAME, profile_name);
+  }
+  #[inline]
+  pub fn add_ssid(&mut self, ssid: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WifiInterfaceStatus::VT_SSID, ssid);
+  }
+  #[inline]
+  pub fn add_ssid_hex(&mut self, ssid_hex: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WifiInterfaceStatus::VT_SSID_HEX, ssid_hex);
+  }
+  #[inline]
+  pub fn add_has_signal_quality(&mut self, has_signal_quality: bool) {
+    self.fbb_.push_slot::<bool>(WifiInterfaceStatus::VT_HAS_SIGNAL_QUALITY, has_signal_quality, false);
+  }
+  #[inline]
+  pub fn add_signal_quality(&mut self, signal_quality: u8) {
+    self.fbb_.push_slot::<u8>(WifiInterfaceStatus::VT_SIGNAL_QUALITY, signal_quality, 0);
+  }
+  #[inline]
+  pub fn add_has_security_enabled(&mut self, has_security_enabled: bool) {
+    self.fbb_.push_slot::<bool>(WifiInterfaceStatus::VT_HAS_SECURITY_ENABLED, has_security_enabled, false);
+  }
+  #[inline]
+  pub fn add_security_enabled(&mut self, security_enabled: bool) {
+    self.fbb_.push_slot::<bool>(WifiInterfaceStatus::VT_SECURITY_ENABLED, security_enabled, false);
+  }
+  #[inline]
+  pub fn add_authentication(&mut self, authentication: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WifiInterfaceStatus::VT_AUTHENTICATION, authentication);
+  }
+  #[inline]
+  pub fn add_cipher(&mut self, cipher: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WifiInterfaceStatus::VT_CIPHER, cipher);
+  }
+  #[inline]
+  pub fn add_has_rx_rate_kbps(&mut self, has_rx_rate_kbps: bool) {
+    self.fbb_.push_slot::<bool>(WifiInterfaceStatus::VT_HAS_RX_RATE_KBPS, has_rx_rate_kbps, false);
+  }
+  #[inline]
+  pub fn add_rx_rate_kbps(&mut self, rx_rate_kbps: u32) {
+    self.fbb_.push_slot::<u32>(WifiInterfaceStatus::VT_RX_RATE_KBPS, rx_rate_kbps, 0);
+  }
+  #[inline]
+  pub fn add_has_tx_rate_kbps(&mut self, has_tx_rate_kbps: bool) {
+    self.fbb_.push_slot::<bool>(WifiInterfaceStatus::VT_HAS_TX_RATE_KBPS, has_tx_rate_kbps, false);
+  }
+  #[inline]
+  pub fn add_tx_rate_kbps(&mut self, tx_rate_kbps: u32) {
+    self.fbb_.push_slot::<u32>(WifiInterfaceStatus::VT_TX_RATE_KBPS, tx_rate_kbps, 0);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> WifiInterfaceStatusBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    WifiInterfaceStatusBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<WifiInterfaceStatus<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    self.fbb_.required(o, WifiInterfaceStatus::VT_NAME,"name");
+    self.fbb_.required(o, WifiInterfaceStatus::VT_STATE,"state");
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for WifiInterfaceStatus<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("WifiInterfaceStatus");
+      ds.field("if_index", &self.if_index());
+      ds.field("name", &self.name());
+      ds.field("guid", &self.guid());
+      ds.field("state", &self.state());
+      ds.field("profile_name", &self.profile_name());
+      ds.field("ssid", &self.ssid());
+      ds.field("ssid_hex", &self.ssid_hex());
+      ds.field("has_signal_quality", &self.has_signal_quality());
+      ds.field("signal_quality", &self.signal_quality());
+      ds.field("has_security_enabled", &self.has_security_enabled());
+      ds.field("security_enabled", &self.security_enabled());
+      ds.field("authentication", &self.authentication());
+      ds.field("cipher", &self.cipher());
+      ds.field("has_rx_rate_kbps", &self.has_rx_rate_kbps());
+      ds.field("rx_rate_kbps", &self.rx_rate_kbps());
+      ds.field("has_tx_rate_kbps", &self.has_tx_rate_kbps());
+      ds.field("tx_rate_kbps", &self.tx_rate_kbps());
+      ds.finish()
+  }
+}
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct WifiInterfaceStatusT {
+  pub if_index: u32,
+  pub name: alloc::string::String,
+  pub guid: Option<alloc::string::String>,
+  pub state: alloc::string::String,
+  pub profile_name: Option<alloc::string::String>,
+  pub ssid: Option<alloc::string::String>,
+  pub ssid_hex: Option<alloc::string::String>,
+  pub has_signal_quality: bool,
+  pub signal_quality: u8,
+  pub has_security_enabled: bool,
+  pub security_enabled: bool,
+  pub authentication: Option<alloc::string::String>,
+  pub cipher: Option<alloc::string::String>,
+  pub has_rx_rate_kbps: bool,
+  pub rx_rate_kbps: u32,
+  pub has_tx_rate_kbps: bool,
+  pub tx_rate_kbps: u32,
+}
+impl Default for WifiInterfaceStatusT {
+  fn default() -> Self {
+    Self {
+      if_index: 0,
+      name: alloc::string::ToString::to_string(""),
+      guid: None,
+      state: alloc::string::ToString::to_string(""),
+      profile_name: None,
+      ssid: None,
+      ssid_hex: None,
+      has_signal_quality: false,
+      signal_quality: 0,
+      has_security_enabled: false,
+      security_enabled: false,
+      authentication: None,
+      cipher: None,
+      has_rx_rate_kbps: false,
+      rx_rate_kbps: 0,
+      has_tx_rate_kbps: false,
+      tx_rate_kbps: 0,
+    }
+  }
+}
+impl WifiInterfaceStatusT {
+  pub fn pack<'b, A: ::flatbuffers::Allocator + 'b>(
+    &self,
+    _fbb: &mut ::flatbuffers::FlatBufferBuilder<'b, A>
+  ) -> ::flatbuffers::WIPOffset<WifiInterfaceStatus<'b>> {
+    let if_index = self.if_index;
+    let name = Some({
+      let x = &self.name;
+      _fbb.create_string(x)
+    });
+    let guid = self.guid.as_ref().map(|x|{
+      _fbb.create_string(x)
+    });
+    let state = Some({
+      let x = &self.state;
+      _fbb.create_string(x)
+    });
+    let profile_name = self.profile_name.as_ref().map(|x|{
+      _fbb.create_string(x)
+    });
+    let ssid = self.ssid.as_ref().map(|x|{
+      _fbb.create_string(x)
+    });
+    let ssid_hex = self.ssid_hex.as_ref().map(|x|{
+      _fbb.create_string(x)
+    });
+    let has_signal_quality = self.has_signal_quality;
+    let signal_quality = self.signal_quality;
+    let has_security_enabled = self.has_security_enabled;
+    let security_enabled = self.security_enabled;
+    let authentication = self.authentication.as_ref().map(|x|{
+      _fbb.create_string(x)
+    });
+    let cipher = self.cipher.as_ref().map(|x|{
+      _fbb.create_string(x)
+    });
+    let has_rx_rate_kbps = self.has_rx_rate_kbps;
+    let rx_rate_kbps = self.rx_rate_kbps;
+    let has_tx_rate_kbps = self.has_tx_rate_kbps;
+    let tx_rate_kbps = self.tx_rate_kbps;
+    WifiInterfaceStatus::create(_fbb, &WifiInterfaceStatusArgs{
+      if_index,
+      name,
+      guid,
+      state,
+      profile_name,
+      ssid,
+      ssid_hex,
+      has_signal_quality,
+      signal_quality,
+      has_security_enabled,
+      security_enabled,
+      authentication,
+      cipher,
+      has_rx_rate_kbps,
+      rx_rate_kbps,
+      has_tx_rate_kbps,
+      tx_rate_kbps,
+    })
+  }
+}
+pub enum WifiNetworkOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct WifiNetwork<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for WifiNetwork<'a> {
+  type Inner = WifiNetwork<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> WifiNetwork<'a> {
+  pub const VT_INTERFACE_IF_INDEX: ::flatbuffers::VOffsetT = 4;
+  pub const VT_INTERFACE_NAME: ::flatbuffers::VOffsetT = 6;
+  pub const VT_SSID: ::flatbuffers::VOffsetT = 8;
+  pub const VT_SSID_HEX: ::flatbuffers::VOffsetT = 10;
+  pub const VT_PROFILE_NAME: ::flatbuffers::VOffsetT = 12;
+  pub const VT_SIGNAL_QUALITY: ::flatbuffers::VOffsetT = 14;
+  pub const VT_SECURITY_ENABLED: ::flatbuffers::VOffsetT = 16;
+  pub const VT_AUTHENTICATION: ::flatbuffers::VOffsetT = 18;
+  pub const VT_CIPHER: ::flatbuffers::VOffsetT = 20;
+  pub const VT_CONNECTABLE: ::flatbuffers::VOffsetT = 22;
+  pub const VT_HAS_NOT_CONNECTABLE_REASON: ::flatbuffers::VOffsetT = 24;
+  pub const VT_NOT_CONNECTABLE_REASON: ::flatbuffers::VOffsetT = 26;
+  pub const VT_CONNECTED: ::flatbuffers::VOffsetT = 28;
+  pub const VT_BSS_COUNT: ::flatbuffers::VOffsetT = 30;
+
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "PENetplan.Ipc.WifiNetwork"
+  }
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    WifiNetwork { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args WifiNetworkArgs<'args>
+  ) -> ::flatbuffers::WIPOffset<WifiNetwork<'bldr>> {
+    let mut builder = WifiNetworkBuilder::new(_fbb);
+    builder.add_bss_count(args.bss_count);
+    builder.add_not_connectable_reason(args.not_connectable_reason);
+    if let Some(x) = args.cipher { builder.add_cipher(x); }
+    if let Some(x) = args.authentication { builder.add_authentication(x); }
+    if let Some(x) = args.profile_name { builder.add_profile_name(x); }
+    if let Some(x) = args.ssid_hex { builder.add_ssid_hex(x); }
+    if let Some(x) = args.ssid { builder.add_ssid(x); }
+    if let Some(x) = args.interface_name { builder.add_interface_name(x); }
+    builder.add_interface_if_index(args.interface_if_index);
+    builder.add_connected(args.connected);
+    builder.add_has_not_connectable_reason(args.has_not_connectable_reason);
+    builder.add_connectable(args.connectable);
+    builder.add_security_enabled(args.security_enabled);
+    builder.add_signal_quality(args.signal_quality);
+    builder.finish()
+  }
+
+  pub fn unpack(&self) -> WifiNetworkT {
+    let interface_if_index = self.interface_if_index();
+    let interface_name = {
+      let x = self.interface_name();
+      alloc::string::ToString::to_string(x)
+    };
+    let ssid = {
+      let x = self.ssid();
+      alloc::string::ToString::to_string(x)
+    };
+    let ssid_hex = {
+      let x = self.ssid_hex();
+      alloc::string::ToString::to_string(x)
+    };
+    let profile_name = self.profile_name().map(|x| {
+      alloc::string::ToString::to_string(x)
+    });
+    let signal_quality = self.signal_quality();
+    let security_enabled = self.security_enabled();
+    let authentication = {
+      let x = self.authentication();
+      alloc::string::ToString::to_string(x)
+    };
+    let cipher = {
+      let x = self.cipher();
+      alloc::string::ToString::to_string(x)
+    };
+    let connectable = self.connectable();
+    let has_not_connectable_reason = self.has_not_connectable_reason();
+    let not_connectable_reason = self.not_connectable_reason();
+    let connected = self.connected();
+    let bss_count = self.bss_count();
+    WifiNetworkT {
+      interface_if_index,
+      interface_name,
+      ssid,
+      ssid_hex,
+      profile_name,
+      signal_quality,
+      security_enabled,
+      authentication,
+      cipher,
+      connectable,
+      has_not_connectable_reason,
+      not_connectable_reason,
+      connected,
+      bss_count,
+    }
+  }
+
+  #[inline]
+  pub fn interface_if_index(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(WifiNetwork::VT_INTERFACE_IF_INDEX, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn interface_name(&self) -> &'a str {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(WifiNetwork::VT_INTERFACE_NAME, None).unwrap()}
+  }
+  #[inline]
+  pub fn ssid(&self) -> &'a str {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(WifiNetwork::VT_SSID, None).unwrap()}
+  }
+  #[inline]
+  pub fn ssid_hex(&self) -> &'a str {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(WifiNetwork::VT_SSID_HEX, None).unwrap()}
+  }
+  #[inline]
+  pub fn profile_name(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(WifiNetwork::VT_PROFILE_NAME, None)}
+  }
+  #[inline]
+  pub fn signal_quality(&self) -> u8 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u8>(WifiNetwork::VT_SIGNAL_QUALITY, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn security_enabled(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(WifiNetwork::VT_SECURITY_ENABLED, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn authentication(&self) -> &'a str {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(WifiNetwork::VT_AUTHENTICATION, None).unwrap()}
+  }
+  #[inline]
+  pub fn cipher(&self) -> &'a str {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(WifiNetwork::VT_CIPHER, None).unwrap()}
+  }
+  #[inline]
+  pub fn connectable(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(WifiNetwork::VT_CONNECTABLE, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn has_not_connectable_reason(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(WifiNetwork::VT_HAS_NOT_CONNECTABLE_REASON, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn not_connectable_reason(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(WifiNetwork::VT_NOT_CONNECTABLE_REASON, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn connected(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(WifiNetwork::VT_CONNECTED, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn bss_count(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(WifiNetwork::VT_BSS_COUNT, Some(0)).unwrap()}
+  }
+}
+
+impl ::flatbuffers::Verifiable for WifiNetwork<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<u32>("interface_if_index", Self::VT_INTERFACE_IF_INDEX, false)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("interface_name", Self::VT_INTERFACE_NAME, true)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("ssid", Self::VT_SSID, true)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("ssid_hex", Self::VT_SSID_HEX, true)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("profile_name", Self::VT_PROFILE_NAME, false)?
+     .visit_field::<u8>("signal_quality", Self::VT_SIGNAL_QUALITY, false)?
+     .visit_field::<bool>("security_enabled", Self::VT_SECURITY_ENABLED, false)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("authentication", Self::VT_AUTHENTICATION, true)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("cipher", Self::VT_CIPHER, true)?
+     .visit_field::<bool>("connectable", Self::VT_CONNECTABLE, false)?
+     .visit_field::<bool>("has_not_connectable_reason", Self::VT_HAS_NOT_CONNECTABLE_REASON, false)?
+     .visit_field::<u32>("not_connectable_reason", Self::VT_NOT_CONNECTABLE_REASON, false)?
+     .visit_field::<bool>("connected", Self::VT_CONNECTED, false)?
+     .visit_field::<u32>("bss_count", Self::VT_BSS_COUNT, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct WifiNetworkArgs<'a> {
+    pub interface_if_index: u32,
+    pub interface_name: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub ssid: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub ssid_hex: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub profile_name: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub signal_quality: u8,
+    pub security_enabled: bool,
+    pub authentication: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub cipher: Option<::flatbuffers::WIPOffset<&'a str>>,
+    pub connectable: bool,
+    pub has_not_connectable_reason: bool,
+    pub not_connectable_reason: u32,
+    pub connected: bool,
+    pub bss_count: u32,
+}
+impl<'a> Default for WifiNetworkArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    WifiNetworkArgs {
+      interface_if_index: 0,
+      interface_name: None, // required field
+      ssid: None, // required field
+      ssid_hex: None, // required field
+      profile_name: None,
+      signal_quality: 0,
+      security_enabled: false,
+      authentication: None, // required field
+      cipher: None, // required field
+      connectable: false,
+      has_not_connectable_reason: false,
+      not_connectable_reason: 0,
+      connected: false,
+      bss_count: 0,
+    }
+  }
+}
+
+pub struct WifiNetworkBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> WifiNetworkBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_interface_if_index(&mut self, interface_if_index: u32) {
+    self.fbb_.push_slot::<u32>(WifiNetwork::VT_INTERFACE_IF_INDEX, interface_if_index, 0);
+  }
+  #[inline]
+  pub fn add_interface_name(&mut self, interface_name: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WifiNetwork::VT_INTERFACE_NAME, interface_name);
+  }
+  #[inline]
+  pub fn add_ssid(&mut self, ssid: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WifiNetwork::VT_SSID, ssid);
+  }
+  #[inline]
+  pub fn add_ssid_hex(&mut self, ssid_hex: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WifiNetwork::VT_SSID_HEX, ssid_hex);
+  }
+  #[inline]
+  pub fn add_profile_name(&mut self, profile_name: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WifiNetwork::VT_PROFILE_NAME, profile_name);
+  }
+  #[inline]
+  pub fn add_signal_quality(&mut self, signal_quality: u8) {
+    self.fbb_.push_slot::<u8>(WifiNetwork::VT_SIGNAL_QUALITY, signal_quality, 0);
+  }
+  #[inline]
+  pub fn add_security_enabled(&mut self, security_enabled: bool) {
+    self.fbb_.push_slot::<bool>(WifiNetwork::VT_SECURITY_ENABLED, security_enabled, false);
+  }
+  #[inline]
+  pub fn add_authentication(&mut self, authentication: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WifiNetwork::VT_AUTHENTICATION, authentication);
+  }
+  #[inline]
+  pub fn add_cipher(&mut self, cipher: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WifiNetwork::VT_CIPHER, cipher);
+  }
+  #[inline]
+  pub fn add_connectable(&mut self, connectable: bool) {
+    self.fbb_.push_slot::<bool>(WifiNetwork::VT_CONNECTABLE, connectable, false);
+  }
+  #[inline]
+  pub fn add_has_not_connectable_reason(&mut self, has_not_connectable_reason: bool) {
+    self.fbb_.push_slot::<bool>(WifiNetwork::VT_HAS_NOT_CONNECTABLE_REASON, has_not_connectable_reason, false);
+  }
+  #[inline]
+  pub fn add_not_connectable_reason(&mut self, not_connectable_reason: u32) {
+    self.fbb_.push_slot::<u32>(WifiNetwork::VT_NOT_CONNECTABLE_REASON, not_connectable_reason, 0);
+  }
+  #[inline]
+  pub fn add_connected(&mut self, connected: bool) {
+    self.fbb_.push_slot::<bool>(WifiNetwork::VT_CONNECTED, connected, false);
+  }
+  #[inline]
+  pub fn add_bss_count(&mut self, bss_count: u32) {
+    self.fbb_.push_slot::<u32>(WifiNetwork::VT_BSS_COUNT, bss_count, 0);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> WifiNetworkBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    WifiNetworkBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<WifiNetwork<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    self.fbb_.required(o, WifiNetwork::VT_INTERFACE_NAME,"interface_name");
+    self.fbb_.required(o, WifiNetwork::VT_SSID,"ssid");
+    self.fbb_.required(o, WifiNetwork::VT_SSID_HEX,"ssid_hex");
+    self.fbb_.required(o, WifiNetwork::VT_AUTHENTICATION,"authentication");
+    self.fbb_.required(o, WifiNetwork::VT_CIPHER,"cipher");
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for WifiNetwork<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("WifiNetwork");
+      ds.field("interface_if_index", &self.interface_if_index());
+      ds.field("interface_name", &self.interface_name());
+      ds.field("ssid", &self.ssid());
+      ds.field("ssid_hex", &self.ssid_hex());
+      ds.field("profile_name", &self.profile_name());
+      ds.field("signal_quality", &self.signal_quality());
+      ds.field("security_enabled", &self.security_enabled());
+      ds.field("authentication", &self.authentication());
+      ds.field("cipher", &self.cipher());
+      ds.field("connectable", &self.connectable());
+      ds.field("has_not_connectable_reason", &self.has_not_connectable_reason());
+      ds.field("not_connectable_reason", &self.not_connectable_reason());
+      ds.field("connected", &self.connected());
+      ds.field("bss_count", &self.bss_count());
+      ds.finish()
+  }
+}
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct WifiNetworkT {
+  pub interface_if_index: u32,
+  pub interface_name: alloc::string::String,
+  pub ssid: alloc::string::String,
+  pub ssid_hex: alloc::string::String,
+  pub profile_name: Option<alloc::string::String>,
+  pub signal_quality: u8,
+  pub security_enabled: bool,
+  pub authentication: alloc::string::String,
+  pub cipher: alloc::string::String,
+  pub connectable: bool,
+  pub has_not_connectable_reason: bool,
+  pub not_connectable_reason: u32,
+  pub connected: bool,
+  pub bss_count: u32,
+}
+impl Default for WifiNetworkT {
+  fn default() -> Self {
+    Self {
+      interface_if_index: 0,
+      interface_name: alloc::string::ToString::to_string(""),
+      ssid: alloc::string::ToString::to_string(""),
+      ssid_hex: alloc::string::ToString::to_string(""),
+      profile_name: None,
+      signal_quality: 0,
+      security_enabled: false,
+      authentication: alloc::string::ToString::to_string(""),
+      cipher: alloc::string::ToString::to_string(""),
+      connectable: false,
+      has_not_connectable_reason: false,
+      not_connectable_reason: 0,
+      connected: false,
+      bss_count: 0,
+    }
+  }
+}
+impl WifiNetworkT {
+  pub fn pack<'b, A: ::flatbuffers::Allocator + 'b>(
+    &self,
+    _fbb: &mut ::flatbuffers::FlatBufferBuilder<'b, A>
+  ) -> ::flatbuffers::WIPOffset<WifiNetwork<'b>> {
+    let interface_if_index = self.interface_if_index;
+    let interface_name = Some({
+      let x = &self.interface_name;
+      _fbb.create_string(x)
+    });
+    let ssid = Some({
+      let x = &self.ssid;
+      _fbb.create_string(x)
+    });
+    let ssid_hex = Some({
+      let x = &self.ssid_hex;
+      _fbb.create_string(x)
+    });
+    let profile_name = self.profile_name.as_ref().map(|x|{
+      _fbb.create_string(x)
+    });
+    let signal_quality = self.signal_quality;
+    let security_enabled = self.security_enabled;
+    let authentication = Some({
+      let x = &self.authentication;
+      _fbb.create_string(x)
+    });
+    let cipher = Some({
+      let x = &self.cipher;
+      _fbb.create_string(x)
+    });
+    let connectable = self.connectable;
+    let has_not_connectable_reason = self.has_not_connectable_reason;
+    let not_connectable_reason = self.not_connectable_reason;
+    let connected = self.connected;
+    let bss_count = self.bss_count;
+    WifiNetwork::create(_fbb, &WifiNetworkArgs{
+      interface_if_index,
+      interface_name,
+      ssid,
+      ssid_hex,
+      profile_name,
+      signal_quality,
+      security_enabled,
+      authentication,
+      cipher,
+      connectable,
+      has_not_connectable_reason,
+      not_connectable_reason,
+      connected,
+      bss_count,
+    })
+  }
+}
+pub enum NetworkStatusResponseOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct NetworkStatusResponse<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for NetworkStatusResponse<'a> {
+  type Inner = NetworkStatusResponse<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> NetworkStatusResponse<'a> {
+  pub const VT_CAPTURED_AT_UNIX_MS: ::flatbuffers::VOffsetT = 4;
+  pub const VT_ADAPTERS: ::flatbuffers::VOffsetT = 6;
+  pub const VT_WIFI_INTERFACES: ::flatbuffers::VOffsetT = 8;
+  pub const VT_WIFI_ERROR: ::flatbuffers::VOffsetT = 10;
+
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "PENetplan.Ipc.NetworkStatusResponse"
+  }
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    NetworkStatusResponse { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args NetworkStatusResponseArgs<'args>
+  ) -> ::flatbuffers::WIPOffset<NetworkStatusResponse<'bldr>> {
+    let mut builder = NetworkStatusResponseBuilder::new(_fbb);
+    builder.add_captured_at_unix_ms(args.captured_at_unix_ms);
+    if let Some(x) = args.wifi_error { builder.add_wifi_error(x); }
+    if let Some(x) = args.wifi_interfaces { builder.add_wifi_interfaces(x); }
+    if let Some(x) = args.adapters { builder.add_adapters(x); }
+    builder.finish()
+  }
+
+  pub fn unpack(&self) -> NetworkStatusResponseT {
+    let captured_at_unix_ms = self.captured_at_unix_ms();
+    let adapters = {
+      let x = self.adapters();
+      x.iter().map(|t| t.unpack()).collect()
+    };
+    let wifi_interfaces = {
+      let x = self.wifi_interfaces();
+      x.iter().map(|t| t.unpack()).collect()
+    };
+    let wifi_error = self.wifi_error().map(|x| {
+      alloc::string::ToString::to_string(x)
+    });
+    NetworkStatusResponseT {
+      captured_at_unix_ms,
+      adapters,
+      wifi_interfaces,
+      wifi_error,
+    }
+  }
+
+  #[inline]
+  pub fn captured_at_unix_ms(&self) -> u64 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u64>(NetworkStatusResponse::VT_CAPTURED_AT_UNIX_MS, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn adapters(&self) -> ::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<Adapter<'a>>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<Adapter>>>>(NetworkStatusResponse::VT_ADAPTERS, None).unwrap()}
+  }
+  #[inline]
+  pub fn wifi_interfaces(&self) -> ::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<WifiInterfaceStatus<'a>>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<WifiInterfaceStatus>>>>(NetworkStatusResponse::VT_WIFI_INTERFACES, None).unwrap()}
+  }
+  #[inline]
+  pub fn wifi_error(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(NetworkStatusResponse::VT_WIFI_ERROR, None)}
+  }
+}
+
+impl ::flatbuffers::Verifiable for NetworkStatusResponse<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<u64>("captured_at_unix_ms", Self::VT_CAPTURED_AT_UNIX_MS, false)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'_, ::flatbuffers::ForwardsUOffset<Adapter>>>>("adapters", Self::VT_ADAPTERS, true)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'_, ::flatbuffers::ForwardsUOffset<WifiInterfaceStatus>>>>("wifi_interfaces", Self::VT_WIFI_INTERFACES, true)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("wifi_error", Self::VT_WIFI_ERROR, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct NetworkStatusResponseArgs<'a> {
+    pub captured_at_unix_ms: u64,
+    pub adapters: Option<::flatbuffers::WIPOffset<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<Adapter<'a>>>>>,
+    pub wifi_interfaces: Option<::flatbuffers::WIPOffset<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<WifiInterfaceStatus<'a>>>>>,
+    pub wifi_error: Option<::flatbuffers::WIPOffset<&'a str>>,
+}
+impl<'a> Default for NetworkStatusResponseArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    NetworkStatusResponseArgs {
+      captured_at_unix_ms: 0,
+      adapters: None, // required field
+      wifi_interfaces: None, // required field
+      wifi_error: None,
+    }
+  }
+}
+
+pub struct NetworkStatusResponseBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> NetworkStatusResponseBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_captured_at_unix_ms(&mut self, captured_at_unix_ms: u64) {
+    self.fbb_.push_slot::<u64>(NetworkStatusResponse::VT_CAPTURED_AT_UNIX_MS, captured_at_unix_ms, 0);
+  }
+  #[inline]
+  pub fn add_adapters(&mut self, adapters: ::flatbuffers::WIPOffset<::flatbuffers::Vector<'b , ::flatbuffers::ForwardsUOffset<Adapter<'b >>>>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(NetworkStatusResponse::VT_ADAPTERS, adapters);
+  }
+  #[inline]
+  pub fn add_wifi_interfaces(&mut self, wifi_interfaces: ::flatbuffers::WIPOffset<::flatbuffers::Vector<'b , ::flatbuffers::ForwardsUOffset<WifiInterfaceStatus<'b >>>>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(NetworkStatusResponse::VT_WIFI_INTERFACES, wifi_interfaces);
+  }
+  #[inline]
+  pub fn add_wifi_error(&mut self, wifi_error: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(NetworkStatusResponse::VT_WIFI_ERROR, wifi_error);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> NetworkStatusResponseBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    NetworkStatusResponseBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<NetworkStatusResponse<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    self.fbb_.required(o, NetworkStatusResponse::VT_ADAPTERS,"adapters");
+    self.fbb_.required(o, NetworkStatusResponse::VT_WIFI_INTERFACES,"wifi_interfaces");
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for NetworkStatusResponse<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("NetworkStatusResponse");
+      ds.field("captured_at_unix_ms", &self.captured_at_unix_ms());
+      ds.field("adapters", &self.adapters());
+      ds.field("wifi_interfaces", &self.wifi_interfaces());
+      ds.field("wifi_error", &self.wifi_error());
+      ds.finish()
+  }
+}
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct NetworkStatusResponseT {
+  pub captured_at_unix_ms: u64,
+  pub adapters: alloc::vec::Vec<AdapterT>,
+  pub wifi_interfaces: alloc::vec::Vec<WifiInterfaceStatusT>,
+  pub wifi_error: Option<alloc::string::String>,
+}
+impl Default for NetworkStatusResponseT {
+  fn default() -> Self {
+    Self {
+      captured_at_unix_ms: 0,
+      adapters: Default::default(),
+      wifi_interfaces: Default::default(),
+      wifi_error: None,
+    }
+  }
+}
+impl NetworkStatusResponseT {
+  pub fn pack<'b, A: ::flatbuffers::Allocator + 'b>(
+    &self,
+    _fbb: &mut ::flatbuffers::FlatBufferBuilder<'b, A>
+  ) -> ::flatbuffers::WIPOffset<NetworkStatusResponse<'b>> {
+    let captured_at_unix_ms = self.captured_at_unix_ms;
+    let adapters = Some({
+      let x = &self.adapters;
+      let w: alloc::vec::Vec<_> = x.iter().map(|t| t.pack(_fbb)).collect();_fbb.create_vector(&w)
+    });
+    let wifi_interfaces = Some({
+      let x = &self.wifi_interfaces;
+      let w: alloc::vec::Vec<_> = x.iter().map(|t| t.pack(_fbb)).collect();_fbb.create_vector(&w)
+    });
+    let wifi_error = self.wifi_error.as_ref().map(|x|{
+      _fbb.create_string(x)
+    });
+    NetworkStatusResponse::create(_fbb, &NetworkStatusResponseArgs{
+      captured_at_unix_ms,
+      adapters,
+      wifi_interfaces,
+      wifi_error,
+    })
+  }
+}
+pub enum WifiStatusResponseOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct WifiStatusResponse<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for WifiStatusResponse<'a> {
+  type Inner = WifiStatusResponse<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> WifiStatusResponse<'a> {
+  pub const VT_INTERFACES: ::flatbuffers::VOffsetT = 4;
+
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "PENetplan.Ipc.WifiStatusResponse"
+  }
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    WifiStatusResponse { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args WifiStatusResponseArgs<'args>
+  ) -> ::flatbuffers::WIPOffset<WifiStatusResponse<'bldr>> {
+    let mut builder = WifiStatusResponseBuilder::new(_fbb);
+    if let Some(x) = args.interfaces { builder.add_interfaces(x); }
+    builder.finish()
+  }
+
+  pub fn unpack(&self) -> WifiStatusResponseT {
+    let interfaces = {
+      let x = self.interfaces();
+      x.iter().map(|t| t.unpack()).collect()
+    };
+    WifiStatusResponseT {
+      interfaces,
+    }
+  }
+
+  #[inline]
+  pub fn interfaces(&self) -> ::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<WifiInterfaceStatus<'a>>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<WifiInterfaceStatus>>>>(WifiStatusResponse::VT_INTERFACES, None).unwrap()}
+  }
+}
+
+impl ::flatbuffers::Verifiable for WifiStatusResponse<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'_, ::flatbuffers::ForwardsUOffset<WifiInterfaceStatus>>>>("interfaces", Self::VT_INTERFACES, true)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct WifiStatusResponseArgs<'a> {
+    pub interfaces: Option<::flatbuffers::WIPOffset<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<WifiInterfaceStatus<'a>>>>>,
+}
+impl<'a> Default for WifiStatusResponseArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    WifiStatusResponseArgs {
+      interfaces: None, // required field
+    }
+  }
+}
+
+pub struct WifiStatusResponseBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> WifiStatusResponseBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_interfaces(&mut self, interfaces: ::flatbuffers::WIPOffset<::flatbuffers::Vector<'b , ::flatbuffers::ForwardsUOffset<WifiInterfaceStatus<'b >>>>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WifiStatusResponse::VT_INTERFACES, interfaces);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> WifiStatusResponseBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    WifiStatusResponseBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<WifiStatusResponse<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    self.fbb_.required(o, WifiStatusResponse::VT_INTERFACES,"interfaces");
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for WifiStatusResponse<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("WifiStatusResponse");
+      ds.field("interfaces", &self.interfaces());
+      ds.finish()
+  }
+}
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct WifiStatusResponseT {
+  pub interfaces: alloc::vec::Vec<WifiInterfaceStatusT>,
+}
+impl Default for WifiStatusResponseT {
+  fn default() -> Self {
+    Self {
+      interfaces: Default::default(),
+    }
+  }
+}
+impl WifiStatusResponseT {
+  pub fn pack<'b, A: ::flatbuffers::Allocator + 'b>(
+    &self,
+    _fbb: &mut ::flatbuffers::FlatBufferBuilder<'b, A>
+  ) -> ::flatbuffers::WIPOffset<WifiStatusResponse<'b>> {
+    let interfaces = Some({
+      let x = &self.interfaces;
+      let w: alloc::vec::Vec<_> = x.iter().map(|t| t.pack(_fbb)).collect();_fbb.create_vector(&w)
+    });
+    WifiStatusResponse::create(_fbb, &WifiStatusResponseArgs{
+      interfaces,
+    })
+  }
+}
+pub enum WifiScanResponseOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct WifiScanResponse<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for WifiScanResponse<'a> {
+  type Inner = WifiScanResponse<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> WifiScanResponse<'a> {
+  pub const VT_REFRESHED: ::flatbuffers::VOffsetT = 4;
+  pub const VT_NETWORKS: ::flatbuffers::VOffsetT = 6;
+
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "PENetplan.Ipc.WifiScanResponse"
+  }
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    WifiScanResponse { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args WifiScanResponseArgs<'args>
+  ) -> ::flatbuffers::WIPOffset<WifiScanResponse<'bldr>> {
+    let mut builder = WifiScanResponseBuilder::new(_fbb);
+    if let Some(x) = args.networks { builder.add_networks(x); }
+    builder.add_refreshed(args.refreshed);
+    builder.finish()
+  }
+
+  pub fn unpack(&self) -> WifiScanResponseT {
+    let refreshed = self.refreshed();
+    let networks = {
+      let x = self.networks();
+      x.iter().map(|t| t.unpack()).collect()
+    };
+    WifiScanResponseT {
+      refreshed,
+      networks,
+    }
+  }
+
+  #[inline]
+  pub fn refreshed(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(WifiScanResponse::VT_REFRESHED, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn networks(&self) -> ::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<WifiNetwork<'a>>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<WifiNetwork>>>>(WifiScanResponse::VT_NETWORKS, None).unwrap()}
+  }
+}
+
+impl ::flatbuffers::Verifiable for WifiScanResponse<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<bool>("refreshed", Self::VT_REFRESHED, false)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'_, ::flatbuffers::ForwardsUOffset<WifiNetwork>>>>("networks", Self::VT_NETWORKS, true)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct WifiScanResponseArgs<'a> {
+    pub refreshed: bool,
+    pub networks: Option<::flatbuffers::WIPOffset<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<WifiNetwork<'a>>>>>,
+}
+impl<'a> Default for WifiScanResponseArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    WifiScanResponseArgs {
+      refreshed: false,
+      networks: None, // required field
+    }
+  }
+}
+
+pub struct WifiScanResponseBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> WifiScanResponseBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_refreshed(&mut self, refreshed: bool) {
+    self.fbb_.push_slot::<bool>(WifiScanResponse::VT_REFRESHED, refreshed, false);
+  }
+  #[inline]
+  pub fn add_networks(&mut self, networks: ::flatbuffers::WIPOffset<::flatbuffers::Vector<'b , ::flatbuffers::ForwardsUOffset<WifiNetwork<'b >>>>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WifiScanResponse::VT_NETWORKS, networks);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> WifiScanResponseBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    WifiScanResponseBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<WifiScanResponse<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    self.fbb_.required(o, WifiScanResponse::VT_NETWORKS,"networks");
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for WifiScanResponse<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("WifiScanResponse");
+      ds.field("refreshed", &self.refreshed());
+      ds.field("networks", &self.networks());
+      ds.finish()
+  }
+}
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct WifiScanResponseT {
+  pub refreshed: bool,
+  pub networks: alloc::vec::Vec<WifiNetworkT>,
+}
+impl Default for WifiScanResponseT {
+  fn default() -> Self {
+    Self {
+      refreshed: false,
+      networks: Default::default(),
+    }
+  }
+}
+impl WifiScanResponseT {
+  pub fn pack<'b, A: ::flatbuffers::Allocator + 'b>(
+    &self,
+    _fbb: &mut ::flatbuffers::FlatBufferBuilder<'b, A>
+  ) -> ::flatbuffers::WIPOffset<WifiScanResponse<'b>> {
+    let refreshed = self.refreshed;
+    let networks = Some({
+      let x = &self.networks;
+      let w: alloc::vec::Vec<_> = x.iter().map(|t| t.pack(_fbb)).collect();_fbb.create_vector(&w)
+    });
+    WifiScanResponse::create(_fbb, &WifiScanResponseArgs{
+      refreshed,
+      networks,
+    })
+  }
+}
 pub enum ErrorResponseOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -4177,6 +7440,56 @@ impl<'a> Envelope<'a> {
             .expect("Invalid union table, expected `Payload::ErrorResponse`.")
             .unpack()
       )),
+      Payload::DaemonStatusRequest => PayloadT::DaemonStatusRequest(alloc::boxed::Box::new(
+        self.payload_as_daemon_status_request()
+            .expect("Invalid union table, expected `Payload::DaemonStatusRequest`.")
+            .unpack()
+      )),
+      Payload::DaemonStatusResponse => PayloadT::DaemonStatusResponse(alloc::boxed::Box::new(
+        self.payload_as_daemon_status_response()
+            .expect("Invalid union table, expected `Payload::DaemonStatusResponse`.")
+            .unpack()
+      )),
+      Payload::ListJobsRequest => PayloadT::ListJobsRequest(alloc::boxed::Box::new(
+        self.payload_as_list_jobs_request()
+            .expect("Invalid union table, expected `Payload::ListJobsRequest`.")
+            .unpack()
+      )),
+      Payload::ListJobsResponse => PayloadT::ListJobsResponse(alloc::boxed::Box::new(
+        self.payload_as_list_jobs_response()
+            .expect("Invalid union table, expected `Payload::ListJobsResponse`.")
+            .unpack()
+      )),
+      Payload::NetworkStatusRequest => PayloadT::NetworkStatusRequest(alloc::boxed::Box::new(
+        self.payload_as_network_status_request()
+            .expect("Invalid union table, expected `Payload::NetworkStatusRequest`.")
+            .unpack()
+      )),
+      Payload::NetworkStatusResponse => PayloadT::NetworkStatusResponse(alloc::boxed::Box::new(
+        self.payload_as_network_status_response()
+            .expect("Invalid union table, expected `Payload::NetworkStatusResponse`.")
+            .unpack()
+      )),
+      Payload::WifiStatusRequest => PayloadT::WifiStatusRequest(alloc::boxed::Box::new(
+        self.payload_as_wifi_status_request()
+            .expect("Invalid union table, expected `Payload::WifiStatusRequest`.")
+            .unpack()
+      )),
+      Payload::WifiStatusResponse => PayloadT::WifiStatusResponse(alloc::boxed::Box::new(
+        self.payload_as_wifi_status_response()
+            .expect("Invalid union table, expected `Payload::WifiStatusResponse`.")
+            .unpack()
+      )),
+      Payload::WifiScanRequest => PayloadT::WifiScanRequest(alloc::boxed::Box::new(
+        self.payload_as_wifi_scan_request()
+            .expect("Invalid union table, expected `Payload::WifiScanRequest`.")
+            .unpack()
+      )),
+      Payload::WifiScanResponse => PayloadT::WifiScanResponse(alloc::boxed::Box::new(
+        self.payload_as_wifi_scan_response()
+            .expect("Invalid union table, expected `Payload::WifiScanResponse`.")
+            .unpack()
+      )),
       _ => PayloadT::NONE,
     };
     EnvelopeT {
@@ -4409,6 +7722,156 @@ impl<'a> Envelope<'a> {
     }
   }
 
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn payload_as_daemon_status_request(&self) -> Option<DaemonStatusRequest<'a>> {
+    if self.payload_type() == Payload::DaemonStatusRequest {
+      self.payload().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { DaemonStatusRequest::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn payload_as_daemon_status_response(&self) -> Option<DaemonStatusResponse<'a>> {
+    if self.payload_type() == Payload::DaemonStatusResponse {
+      self.payload().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { DaemonStatusResponse::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn payload_as_list_jobs_request(&self) -> Option<ListJobsRequest<'a>> {
+    if self.payload_type() == Payload::ListJobsRequest {
+      self.payload().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { ListJobsRequest::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn payload_as_list_jobs_response(&self) -> Option<ListJobsResponse<'a>> {
+    if self.payload_type() == Payload::ListJobsResponse {
+      self.payload().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { ListJobsResponse::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn payload_as_network_status_request(&self) -> Option<NetworkStatusRequest<'a>> {
+    if self.payload_type() == Payload::NetworkStatusRequest {
+      self.payload().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { NetworkStatusRequest::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn payload_as_network_status_response(&self) -> Option<NetworkStatusResponse<'a>> {
+    if self.payload_type() == Payload::NetworkStatusResponse {
+      self.payload().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { NetworkStatusResponse::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn payload_as_wifi_status_request(&self) -> Option<WifiStatusRequest<'a>> {
+    if self.payload_type() == Payload::WifiStatusRequest {
+      self.payload().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { WifiStatusRequest::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn payload_as_wifi_status_response(&self) -> Option<WifiStatusResponse<'a>> {
+    if self.payload_type() == Payload::WifiStatusResponse {
+      self.payload().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { WifiStatusResponse::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn payload_as_wifi_scan_request(&self) -> Option<WifiScanRequest<'a>> {
+    if self.payload_type() == Payload::WifiScanRequest {
+      self.payload().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { WifiScanRequest::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn payload_as_wifi_scan_response(&self) -> Option<WifiScanResponse<'a>> {
+    if self.payload_type() == Payload::WifiScanResponse {
+      self.payload().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { WifiScanResponse::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
 }
 
 impl ::flatbuffers::Verifiable for Envelope<'_> {
@@ -4434,6 +7897,16 @@ impl ::flatbuffers::Verifiable for Envelope<'_> {
           Payload::JobStatusRequest => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<JobStatusRequest>>("Payload::JobStatusRequest", pos),
           Payload::JobStatusResponse => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<JobStatusResponse>>("Payload::JobStatusResponse", pos),
           Payload::ErrorResponse => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<ErrorResponse>>("Payload::ErrorResponse", pos),
+          Payload::DaemonStatusRequest => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<DaemonStatusRequest>>("Payload::DaemonStatusRequest", pos),
+          Payload::DaemonStatusResponse => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<DaemonStatusResponse>>("Payload::DaemonStatusResponse", pos),
+          Payload::ListJobsRequest => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<ListJobsRequest>>("Payload::ListJobsRequest", pos),
+          Payload::ListJobsResponse => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<ListJobsResponse>>("Payload::ListJobsResponse", pos),
+          Payload::NetworkStatusRequest => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<NetworkStatusRequest>>("Payload::NetworkStatusRequest", pos),
+          Payload::NetworkStatusResponse => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<NetworkStatusResponse>>("Payload::NetworkStatusResponse", pos),
+          Payload::WifiStatusRequest => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<WifiStatusRequest>>("Payload::WifiStatusRequest", pos),
+          Payload::WifiStatusResponse => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<WifiStatusResponse>>("Payload::WifiStatusResponse", pos),
+          Payload::WifiScanRequest => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<WifiScanRequest>>("Payload::WifiScanRequest", pos),
+          Payload::WifiScanResponse => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<WifiScanResponse>>("Payload::WifiScanResponse", pos),
           _ => Ok(()),
         }
      })?
@@ -4588,6 +8061,76 @@ impl ::core::fmt::Debug for Envelope<'_> {
         },
         Payload::ErrorResponse => {
           if let Some(x) = self.payload_as_error_response() {
+            ds.field("payload", &x)
+          } else {
+            ds.field("payload", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        Payload::DaemonStatusRequest => {
+          if let Some(x) = self.payload_as_daemon_status_request() {
+            ds.field("payload", &x)
+          } else {
+            ds.field("payload", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        Payload::DaemonStatusResponse => {
+          if let Some(x) = self.payload_as_daemon_status_response() {
+            ds.field("payload", &x)
+          } else {
+            ds.field("payload", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        Payload::ListJobsRequest => {
+          if let Some(x) = self.payload_as_list_jobs_request() {
+            ds.field("payload", &x)
+          } else {
+            ds.field("payload", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        Payload::ListJobsResponse => {
+          if let Some(x) = self.payload_as_list_jobs_response() {
+            ds.field("payload", &x)
+          } else {
+            ds.field("payload", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        Payload::NetworkStatusRequest => {
+          if let Some(x) = self.payload_as_network_status_request() {
+            ds.field("payload", &x)
+          } else {
+            ds.field("payload", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        Payload::NetworkStatusResponse => {
+          if let Some(x) = self.payload_as_network_status_response() {
+            ds.field("payload", &x)
+          } else {
+            ds.field("payload", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        Payload::WifiStatusRequest => {
+          if let Some(x) = self.payload_as_wifi_status_request() {
+            ds.field("payload", &x)
+          } else {
+            ds.field("payload", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        Payload::WifiStatusResponse => {
+          if let Some(x) = self.payload_as_wifi_status_response() {
+            ds.field("payload", &x)
+          } else {
+            ds.field("payload", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        Payload::WifiScanRequest => {
+          if let Some(x) = self.payload_as_wifi_scan_request() {
+            ds.field("payload", &x)
+          } else {
+            ds.field("payload", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        Payload::WifiScanResponse => {
+          if let Some(x) = self.payload_as_wifi_scan_response() {
             ds.field("payload", &x)
           } else {
             ds.field("payload", &"InvalidFlatbuffer: Union discriminant does not match value.")

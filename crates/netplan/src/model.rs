@@ -58,3 +58,65 @@ pub struct AdapterInfo {
     /// Assigned IPv6 addresses.
     pub ipv6: Vec<IpAddressInfo>,
 }
+
+/// Current connection state for one native Wi-Fi interface.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct WifiInterfaceStatus {
+    /// Windows interface index.
+    pub if_index: u32,
+    /// Friendly interface name.
+    pub name: String,
+    /// Windows interface GUID when available.
+    pub guid: Option<String>,
+    /// Stable state such as `connected` or `disconnected`.
+    pub state: String,
+    /// Active WLAN profile name when connected.
+    pub profile_name: Option<String>,
+    /// Display form of the active SSID when connected.
+    pub ssid: Option<String>,
+    /// Exact active SSID bytes encoded as uppercase hexadecimal.
+    pub ssid_hex: Option<String>,
+    /// Native signal quality from 0 through 100.
+    pub signal_quality: Option<u8>,
+    /// Whether link-layer security is enabled.
+    pub security_enabled: Option<bool>,
+    /// Stable authentication algorithm name.
+    pub authentication: Option<String>,
+    /// Stable cipher algorithm name.
+    pub cipher: Option<String>,
+    /// Current receive rate in kilobits per second.
+    pub rx_rate_kbps: Option<u32>,
+    /// Current transmit rate in kilobits per second.
+    pub tx_rate_kbps: Option<u32>,
+}
+
+/// One network returned by a native Wi-Fi scan.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct WifiNetwork {
+    /// Interface index that observed this network.
+    pub interface_if_index: u32,
+    /// Friendly name of the observing interface.
+    pub interface_name: String,
+    /// Lossy UTF-8 display form of the SSID.
+    pub ssid: String,
+    /// Exact SSID bytes encoded as uppercase hexadecimal.
+    pub ssid_hex: String,
+    /// Matching saved profile name when one exists.
+    pub profile_name: Option<String>,
+    /// Native signal quality from 0 through 100.
+    pub signal_quality: u8,
+    /// Whether link-layer security is enabled.
+    pub security_enabled: bool,
+    /// Stable authentication algorithm name.
+    pub authentication: String,
+    /// Stable cipher algorithm name.
+    pub cipher: String,
+    /// Whether Windows considers the network connectable.
+    pub connectable: bool,
+    /// Native reason code when the network is not connectable.
+    pub not_connectable_reason: Option<u32>,
+    /// Whether this is the current connection.
+    pub connected: bool,
+    /// Number of BSS entries represented by this network.
+    pub bss_count: u32,
+}

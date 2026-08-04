@@ -16,12 +16,17 @@ doc = false
 
 [dependencies]
 clap.workspace = true
-netplan = { path = "../netplan" }
+ipnet.workspace = true
+netplan = { path = "../netplan", version = "0.1.0" }
 tokio.workspace = true
 uuid.workspace = true
 
 [target.'cfg(windows)'.dependencies]
+mimalloc.workspace = true
 windows.workspace = true
+
+[target.'cfg(all(windows, target_env = "msvc"))'.dependencies]
+vc-ltl.workspace = true
 
 [lints]
 workspace = true

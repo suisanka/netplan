@@ -7,7 +7,9 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use crate::PROTOCOL_VERSION;
 use crate::config::ConfigFormat;
 use crate::error::{Error, Result};
-use crate::model::{AdapterInfo, Capability, CapabilityState, IpAddressInfo};
+use crate::model::{
+    AdapterInfo, Capability, CapabilityState, IpAddressInfo, WifiInterfaceStatus, WifiNetwork,
+};
 use crate::plan::{Operation, OperationRisk};
 
 #[allow(
@@ -51,6 +53,8 @@ pub enum ConfigAction {
 pub enum Request {
     /// Health and version probe.
     Ping,
+    /// Query daemon uptime and in-memory job counters.
+    DaemonStatus,
     /// Query image capabilities.
     Capabilities,
     /// Enumerate network adapters.
@@ -70,6 +74,29 @@ pub enum Request {
     JobStatus {
         /// Job identifier returned by an apply request.
         job_id: String,
+    },
+    /// List apply jobs retained by the running daemon.
+    ListJobs {
+        /// Optional exact state filter.
+        state: Option<JobState>,
+        /// Maximum number of jobs to return.
+        limit: u32,
+    },
+    /// Query current adapter and Wi-Fi connection state.
+    NetworkStatus,
+    /// Query current Wi-Fi interface connection state.
+    WifiStatus {
+        /// Optional Windows interface index filter.
+        if_index: Option<u32>,
+    },
+    /// Scan or read cached Wi-Fi networks.
+    WifiScan {
+        /// Optional Windows interface index filter.
+        if_index: Option<u32>,
+        /// Request a native scan before reading results.
+        refresh: bool,
+        /// Maximum scan completion wait in milliseconds.
+        timeout_ms: u32,
     },
 }
 
@@ -96,6 +123,21 @@ pub enum JobState {
     Failed,
     /// Failed and restored the captured state.
     RolledBack,
+}
+
+/// Summary of an apply job retained by the running daemon.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct JobSummary {
+    /// Job identifier returned by apply.
+    pub job_id: String,
+    /// Current job state.
+    pub state: JobState,
+    /// Optional progress or completion message.
+    pub message: Option<String>,
+    /// Creation timestamp in Unix milliseconds.
+    pub created_at_unix_ms: u64,
+    /// Last update timestamp in Unix milliseconds.
+    pub updated_at_unix_ms: u64,
 }
 
 /// Stable daemon error code.
@@ -125,6 +167,29 @@ pub enum Response {
         daemon_version: String,
         /// Daemon protocol version.
         protocol_version: u32,
+    },
+    /// Daemon process status and in-memory job counters.
+    DaemonStatus {
+        /// Daemon package version.
+        daemon_version: String,
+        /// Daemon protocol version.
+        protocol_version: u32,
+        /// Daemon start timestamp in Unix milliseconds.
+        started_at_unix_ms: u64,
+        /// Monotonic uptime in milliseconds.
+        uptime_ms: u64,
+        /// Total number of retained jobs.
+        total_jobs: u32,
+        /// Retained queued jobs.
+        queued_jobs: u32,
+        /// Retained running jobs.
+        running_jobs: u32,
+        /// Retained successful jobs.
+        succeeded_jobs: u32,
+        /// Retained failed jobs.
+        failed_jobs: u32,
+        /// Retained rolled-back jobs.
+        rolled_back_jobs: u32,
     },
     /// Platform capability report.
     Capabilities(Vec<Capability>),
@@ -157,6 +222,33 @@ pub enum Response {
         /// Optional diagnostic.
         message: Option<String>,
     },
+    /// Apply jobs retained by the running daemon.
+    Jobs {
+        /// Jobs after filtering, ordering, and limiting.
+        jobs: Vec<JobSummary>,
+        /// Matching count before the limit is applied.
+        total: u32,
+    },
+    /// Current local adapter and Wi-Fi connection state.
+    NetworkStatus {
+        /// Snapshot timestamp in Unix milliseconds.
+        captured_at_unix_ms: u64,
+        /// Current network adapter inventory.
+        adapters: Vec<AdapterInfo>,
+        /// Current Wi-Fi interface states.
+        wifi_interfaces: Vec<WifiInterfaceStatus>,
+        /// Optional Wi-Fi discovery error without failing adapter status.
+        wifi_error: Option<String>,
+    },
+    /// Current Wi-Fi interface states.
+    WifiStatus(Vec<WifiInterfaceStatus>),
+    /// Networks returned by native Wi-Fi discovery.
+    WifiNetworks {
+        /// Whether scan completion was observed before results were read.
+        refreshed: bool,
+        /// Available networks, sorted by connection and signal quality.
+        networks: Vec<WifiNetwork>,
+    },
     /// Typed daemon rejection.
     Error {
         /// Stable error code.
@@ -171,6 +263,7 @@ pub enum Response {
 pub fn encode_request(request_id: u64, request: &Request) -> Vec<u8> {
     let payload = match request {
         Request::Ping => wire::PayloadT::PingRequest(Box::default()),
+        Request::DaemonStatus => wire::PayloadT::DaemonStatusRequest(Box::default()),
         Request::Capabilities => wire::PayloadT::CapabilitiesRequest(Box::default()),
         Request::ListAdapters => wire::PayloadT::ListAdaptersRequest(Box::default()),
         Request::Config {
@@ -189,6 +282,30 @@ pub fn encode_request(request_id: u64, request: &Request) -> Vec<u8> {
                 job_id: job_id.clone(),
             }))
         }
+        Request::ListJobs { state, limit } => {
+            wire::PayloadT::ListJobsRequest(Box::new(wire::ListJobsRequestT {
+                has_state: state.is_some(),
+                state: state.map_or(wire::JobState::Queued, job_state_to_wire),
+                limit: *limit,
+            }))
+        }
+        Request::NetworkStatus => wire::PayloadT::NetworkStatusRequest(Box::default()),
+        Request::WifiStatus { if_index } => {
+            wire::PayloadT::WifiStatusRequest(Box::new(wire::WifiStatusRequestT {
+                has_if_index: if_index.is_some(),
+                if_index: if_index.unwrap_or_default(),
+            }))
+        }
+        Request::WifiScan {
+            if_index,
+            refresh,
+            timeout_ms,
+        } => wire::PayloadT::WifiScanRequest(Box::new(wire::WifiScanRequestT {
+            has_if_index: if_index.is_some(),
+            if_index: if_index.unwrap_or_default(),
+            refresh: *refresh,
+            timeout_ms: *timeout_ms,
+        })),
     };
     encode_envelope(request_id, payload)
 }
@@ -203,6 +320,7 @@ pub fn decode_request(frame: &[u8]) -> Result<Frame<Request>> {
     let envelope = decode_envelope(frame)?;
     let payload = match envelope.payload {
         wire::PayloadT::PingRequest(_) => Request::Ping,
+        wire::PayloadT::DaemonStatusRequest(_) => Request::DaemonStatus,
         wire::PayloadT::CapabilitiesRequest(_) => Request::Capabilities,
         wire::PayloadT::ListAdaptersRequest(_) => Request::ListAdapters,
         wire::PayloadT::ConfigRequest(config) => Request::Config {
@@ -214,6 +332,22 @@ pub fn decode_request(frame: &[u8]) -> Result<Frame<Request>> {
         wire::PayloadT::JobStatusRequest(request) => Request::JobStatus {
             job_id: request.job_id,
         },
+        wire::PayloadT::ListJobsRequest(request) => Request::ListJobs {
+            state: request
+                .has_state
+                .then(|| job_state_from_wire(request.state))
+                .transpose()?,
+            limit: request.limit,
+        },
+        wire::PayloadT::NetworkStatusRequest(_) => Request::NetworkStatus,
+        wire::PayloadT::WifiStatusRequest(request) => Request::WifiStatus {
+            if_index: request.has_if_index.then_some(request.if_index),
+        },
+        wire::PayloadT::WifiScanRequest(request) => Request::WifiScan {
+            if_index: request.has_if_index.then_some(request.if_index),
+            refresh: request.refresh,
+            timeout_ms: request.timeout_ms,
+        },
         _ => return Err(Error::Protocol("frame does not contain a request".into())),
     };
     Ok(Frame {
@@ -224,6 +358,7 @@ pub fn decode_request(frame: &[u8]) -> Result<Frame<Request>> {
 
 /// Encode one response as a size-prefixed `FlatBuffers` frame.
 #[must_use]
+#[allow(clippy::too_many_lines)]
 pub fn encode_response(request_id: u64, response: &Response) -> Vec<u8> {
     let payload = match response {
         Response::Pong {
@@ -232,6 +367,29 @@ pub fn encode_response(request_id: u64, response: &Response) -> Vec<u8> {
         } => wire::PayloadT::PingResponse(Box::new(wire::PingResponseT {
             daemon_version: daemon_version.clone(),
             protocol_version: *protocol_version,
+        })),
+        Response::DaemonStatus {
+            daemon_version,
+            protocol_version,
+            started_at_unix_ms,
+            uptime_ms,
+            total_jobs,
+            queued_jobs,
+            running_jobs,
+            succeeded_jobs,
+            failed_jobs,
+            rolled_back_jobs,
+        } => wire::PayloadT::DaemonStatusResponse(Box::new(wire::DaemonStatusResponseT {
+            daemon_version: daemon_version.clone(),
+            protocol_version: *protocol_version,
+            started_at_unix_ms: *started_at_unix_ms,
+            uptime_ms: *uptime_ms,
+            total_jobs: *total_jobs,
+            queued_jobs: *queued_jobs,
+            running_jobs: *running_jobs,
+            succeeded_jobs: *succeeded_jobs,
+            failed_jobs: *failed_jobs,
+            rolled_back_jobs: *rolled_back_jobs,
         })),
         Response::Capabilities(capabilities) => {
             wire::PayloadT::CapabilitiesResponse(Box::new(wire::CapabilitiesResponseT {
@@ -278,6 +436,41 @@ pub fn encode_response(request_id: u64, response: &Response) -> Vec<u8> {
             state: job_state_to_wire(*state),
             message: message.clone(),
         })),
+        Response::Jobs { jobs, total } => {
+            wire::PayloadT::ListJobsResponse(Box::new(wire::ListJobsResponseT {
+                jobs: jobs.iter().map(job_summary_to_wire).collect(),
+                total: *total,
+            }))
+        }
+        Response::NetworkStatus {
+            captured_at_unix_ms,
+            adapters,
+            wifi_interfaces,
+            wifi_error,
+        } => wire::PayloadT::NetworkStatusResponse(Box::new(wire::NetworkStatusResponseT {
+            captured_at_unix_ms: *captured_at_unix_ms,
+            adapters: adapters.iter().map(adapter_to_wire).collect(),
+            wifi_interfaces: wifi_interfaces
+                .iter()
+                .map(wifi_interface_status_to_wire)
+                .collect(),
+            wifi_error: wifi_error.clone(),
+        })),
+        Response::WifiStatus(interfaces) => {
+            wire::PayloadT::WifiStatusResponse(Box::new(wire::WifiStatusResponseT {
+                interfaces: interfaces
+                    .iter()
+                    .map(wifi_interface_status_to_wire)
+                    .collect(),
+            }))
+        }
+        Response::WifiNetworks {
+            refreshed,
+            networks,
+        } => wire::PayloadT::WifiScanResponse(Box::new(wire::WifiScanResponseT {
+            refreshed: *refreshed,
+            networks: networks.iter().map(wifi_network_to_wire).collect(),
+        })),
         Response::Error { code, message } => {
             wire::PayloadT::ErrorResponse(Box::new(wire::ErrorResponseT {
                 code: error_code_to_wire(*code),
@@ -294,12 +487,25 @@ pub fn encode_response(request_id: u64, response: &Response) -> Vec<u8> {
 ///
 /// Returns an error when the frame length, file identifier, protocol version,
 /// payload type, or typed fields are invalid.
+#[allow(clippy::too_many_lines)]
 pub fn decode_response(frame: &[u8]) -> Result<Frame<Response>> {
     let envelope = decode_envelope(frame)?;
     let payload = match envelope.payload {
         wire::PayloadT::PingResponse(response) => Response::Pong {
             daemon_version: response.daemon_version,
             protocol_version: response.protocol_version,
+        },
+        wire::PayloadT::DaemonStatusResponse(response) => Response::DaemonStatus {
+            daemon_version: response.daemon_version,
+            protocol_version: response.protocol_version,
+            started_at_unix_ms: response.started_at_unix_ms,
+            uptime_ms: response.uptime_ms,
+            total_jobs: response.total_jobs,
+            queued_jobs: response.queued_jobs,
+            running_jobs: response.running_jobs,
+            succeeded_jobs: response.succeeded_jobs,
+            failed_jobs: response.failed_jobs,
+            rolled_back_jobs: response.rolled_back_jobs,
         },
         wire::PayloadT::CapabilitiesResponse(response) => Response::Capabilities(
             response
@@ -346,6 +552,43 @@ pub fn decode_response(frame: &[u8]) -> Result<Frame<Response>> {
             job_id: response.job_id,
             state: job_state_from_wire(response.state)?,
             message: response.message,
+        },
+        wire::PayloadT::ListJobsResponse(response) => Response::Jobs {
+            jobs: response
+                .jobs
+                .into_iter()
+                .map(job_summary_from_wire)
+                .collect::<Result<_>>()?,
+            total: response.total,
+        },
+        wire::PayloadT::NetworkStatusResponse(response) => Response::NetworkStatus {
+            captured_at_unix_ms: response.captured_at_unix_ms,
+            adapters: response
+                .adapters
+                .into_iter()
+                .map(adapter_from_wire)
+                .collect(),
+            wifi_interfaces: response
+                .wifi_interfaces
+                .into_iter()
+                .map(wifi_interface_status_from_wire)
+                .collect(),
+            wifi_error: response.wifi_error,
+        },
+        wire::PayloadT::WifiStatusResponse(response) => Response::WifiStatus(
+            response
+                .interfaces
+                .into_iter()
+                .map(wifi_interface_status_from_wire)
+                .collect(),
+        ),
+        wire::PayloadT::WifiScanResponse(response) => Response::WifiNetworks {
+            refreshed: response.refreshed,
+            networks: response
+                .networks
+                .into_iter()
+                .map(wifi_network_from_wire)
+                .collect(),
         },
         wire::PayloadT::ErrorResponse(response) => Response::Error {
             code: error_code_from_wire(response.code)?,
@@ -544,6 +787,85 @@ fn adapter_from_wire(value: wire::AdapterT) -> AdapterInfo {
     }
 }
 
+fn wifi_interface_status_to_wire(value: &WifiInterfaceStatus) -> wire::WifiInterfaceStatusT {
+    wire::WifiInterfaceStatusT {
+        if_index: value.if_index,
+        name: value.name.clone(),
+        guid: value.guid.clone(),
+        state: value.state.clone(),
+        profile_name: value.profile_name.clone(),
+        ssid: value.ssid.clone(),
+        ssid_hex: value.ssid_hex.clone(),
+        has_signal_quality: value.signal_quality.is_some(),
+        signal_quality: value.signal_quality.unwrap_or_default(),
+        has_security_enabled: value.security_enabled.is_some(),
+        security_enabled: value.security_enabled.unwrap_or_default(),
+        authentication: value.authentication.clone(),
+        cipher: value.cipher.clone(),
+        has_rx_rate_kbps: value.rx_rate_kbps.is_some(),
+        rx_rate_kbps: value.rx_rate_kbps.unwrap_or_default(),
+        has_tx_rate_kbps: value.tx_rate_kbps.is_some(),
+        tx_rate_kbps: value.tx_rate_kbps.unwrap_or_default(),
+    }
+}
+
+fn wifi_interface_status_from_wire(value: wire::WifiInterfaceStatusT) -> WifiInterfaceStatus {
+    WifiInterfaceStatus {
+        if_index: value.if_index,
+        name: value.name,
+        guid: value.guid,
+        state: value.state,
+        profile_name: value.profile_name,
+        ssid: value.ssid,
+        ssid_hex: value.ssid_hex,
+        signal_quality: value.has_signal_quality.then_some(value.signal_quality),
+        security_enabled: value.has_security_enabled.then_some(value.security_enabled),
+        authentication: value.authentication,
+        cipher: value.cipher,
+        rx_rate_kbps: value.has_rx_rate_kbps.then_some(value.rx_rate_kbps),
+        tx_rate_kbps: value.has_tx_rate_kbps.then_some(value.tx_rate_kbps),
+    }
+}
+
+fn wifi_network_to_wire(value: &WifiNetwork) -> wire::WifiNetworkT {
+    wire::WifiNetworkT {
+        interface_if_index: value.interface_if_index,
+        interface_name: value.interface_name.clone(),
+        ssid: value.ssid.clone(),
+        ssid_hex: value.ssid_hex.clone(),
+        profile_name: value.profile_name.clone(),
+        signal_quality: value.signal_quality,
+        security_enabled: value.security_enabled,
+        authentication: value.authentication.clone(),
+        cipher: value.cipher.clone(),
+        connectable: value.connectable,
+        has_not_connectable_reason: value.not_connectable_reason.is_some(),
+        not_connectable_reason: value.not_connectable_reason.unwrap_or_default(),
+        connected: value.connected,
+        bss_count: value.bss_count,
+    }
+}
+
+fn wifi_network_from_wire(value: wire::WifiNetworkT) -> WifiNetwork {
+    WifiNetwork {
+        interface_if_index: value.interface_if_index,
+        interface_name: value.interface_name,
+        ssid: value.ssid,
+        ssid_hex: value.ssid_hex,
+        profile_name: value.profile_name,
+        signal_quality: value.signal_quality,
+        security_enabled: value.security_enabled,
+        authentication: value.authentication,
+        cipher: value.cipher,
+        connectable: value.connectable,
+        not_connectable_reason: value
+            .has_not_connectable_reason
+            .then_some(value.not_connectable_reason),
+        connected: value.connected,
+        bss_count: value.bss_count,
+    }
+}
+
 fn ip_address_to_wire(value: &IpAddressInfo) -> wire::IpAddressT {
     wire::IpAddressT {
         address: value.address.clone(),
@@ -611,6 +933,26 @@ fn job_state_from_wire(value: wire::JobState) -> Result<JobState> {
     }
 }
 
+fn job_summary_to_wire(value: &JobSummary) -> wire::JobSummaryT {
+    wire::JobSummaryT {
+        job_id: value.job_id.clone(),
+        state: job_state_to_wire(value.state),
+        message: value.message.clone(),
+        created_at_unix_ms: value.created_at_unix_ms,
+        updated_at_unix_ms: value.updated_at_unix_ms,
+    }
+}
+
+fn job_summary_from_wire(value: wire::JobSummaryT) -> Result<JobSummary> {
+    Ok(JobSummary {
+        job_id: value.job_id,
+        state: job_state_from_wire(value.state)?,
+        message: value.message,
+        created_at_unix_ms: value.created_at_unix_ms,
+        updated_at_unix_ms: value.updated_at_unix_ms,
+    })
+}
+
 fn error_code_to_wire(value: ErrorCode) -> wire::ErrorCode {
     match value {
         ErrorCode::InvalidRequest => wire::ErrorCode::InvalidRequest,
@@ -655,6 +997,126 @@ mod tests {
                 payload: request
             })
         );
+    }
+
+    #[test]
+    fn daemon_status_request_round_trip_is_typed_and_correlated() {
+        let request = Request::DaemonStatus;
+        let encoded = encode_request(43, &request);
+        let decoded = decode_request(&encoded);
+        assert_eq!(
+            decoded.ok(),
+            Some(Frame {
+                request_id: 43,
+                payload: request
+            })
+        );
+    }
+
+    #[test]
+    fn additive_payloads_preserve_v1_union_discriminators() {
+        assert_eq!(wire::Payload::ErrorResponse.0, 13);
+        assert_eq!(wire::Payload::DaemonStatusRequest.0, 14);
+        assert_eq!(wire::Payload::ListJobsResponse.0, 17);
+        assert_eq!(wire::Payload::NetworkStatusRequest.0, 18);
+        assert_eq!(wire::Payload::WifiScanResponse.0, 23);
+    }
+
+    #[test]
+    fn job_list_response_round_trip_preserves_metadata() {
+        let response = Response::Jobs {
+            jobs: vec![JobSummary {
+                job_id: "job-7".into(),
+                state: JobState::RolledBack,
+                message: Some("restored captured state".into()),
+                created_at_unix_ms: 1_700_000_000_000,
+                updated_at_unix_ms: 1_700_000_000_100,
+            }],
+            total: 1,
+        };
+        let encoded = encode_response(44, &response);
+        let decoded = decode_response(&encoded);
+        assert_eq!(decoded.ok().map(|frame| frame.payload), Some(response));
+    }
+
+    #[test]
+    fn wifi_scan_request_round_trip_preserves_refresh_controls() {
+        let request = Request::WifiScan {
+            if_index: Some(7),
+            refresh: true,
+            timeout_ms: 4_000,
+        };
+        let encoded = encode_request(45, &request);
+        let decoded = decode_request(&encoded);
+        assert_eq!(
+            decoded.ok(),
+            Some(Frame {
+                request_id: 45,
+                payload: request
+            })
+        );
+    }
+
+    #[test]
+    fn network_status_response_round_trip_preserves_wifi_connection() {
+        let response = Response::NetworkStatus {
+            captured_at_unix_ms: 1_700_000_000_000,
+            adapters: vec![AdapterInfo {
+                if_index: 7,
+                name: "Wi-Fi".into(),
+                description: Some("Test WLAN".into()),
+                guid: Some("{00000000-0000-0000-0000-000000000007}".into()),
+                mac_address: Some("02-00-00-00-00-07".into()),
+                status: "up".into(),
+                hardware: true,
+                ipv4: Vec::new(),
+                ipv6: Vec::new(),
+            }],
+            wifi_interfaces: vec![WifiInterfaceStatus {
+                if_index: 7,
+                name: "Wi-Fi".into(),
+                guid: Some("{00000000-0000-0000-0000-000000000007}".into()),
+                state: "connected".into(),
+                profile_name: Some("Lab".into()),
+                ssid: Some("Lab".into()),
+                ssid_hex: Some("4C6162".into()),
+                signal_quality: Some(81),
+                security_enabled: Some(true),
+                authentication: Some("wpa2_personal".into()),
+                cipher: Some("ccmp".into()),
+                rx_rate_kbps: Some(866_700),
+                tx_rate_kbps: Some(866_700),
+            }],
+            wifi_error: None,
+        };
+        let encoded = encode_response(46, &response);
+        let decoded = decode_response(&encoded);
+        assert_eq!(decoded.ok().map(|frame| frame.payload), Some(response));
+    }
+
+    #[test]
+    fn wifi_scan_response_round_trip_preserves_network_metadata() {
+        let response = Response::WifiNetworks {
+            refreshed: true,
+            networks: vec![WifiNetwork {
+                interface_if_index: 7,
+                interface_name: "Wi-Fi".into(),
+                ssid: "Lab".into(),
+                ssid_hex: "4C6162".into(),
+                profile_name: Some("Lab".into()),
+                signal_quality: 90,
+                security_enabled: true,
+                authentication: "wpa3_sae".into(),
+                cipher: "ccmp".into(),
+                connectable: true,
+                not_connectable_reason: None,
+                connected: true,
+                bss_count: 2,
+            }],
+        };
+        let encoded = encode_response(47, &response);
+        let decoded = decode_response(&encoded);
+        assert_eq!(decoded.ok().map(|frame| frame.payload), Some(response));
     }
 
     #[test]

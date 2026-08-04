@@ -2,7 +2,12 @@
 
 #![deny(clippy::expect_used, clippy::unwrap_used)]
 
+mod interactive;
 mod jsonrpc;
+
+#[cfg(windows)]
+#[global_allocator]
+static GLOBAL_ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 use std::path::{Path, PathBuf};
 use std::process::{ExitCode, Stdio};
@@ -56,6 +61,13 @@ enum Commands {
     Capabilities,
     /// List network adapters.
     Adapters,
+    /// Show current adapter and Wi-Fi connection state.
+    Status,
+    /// Inspect native Wi-Fi interfaces and nearby networks.
+    Wifi {
+        #[command(subcommand)]
+        command: WifiCommands,
+    },
     /// Validate a YAML or JSON configuration.
     Validate {
         /// Configuration path.
@@ -90,6 +102,30 @@ enum Commands {
     },
     /// Serve newline-delimited JSON-RPC 2.0 over stdin/stdout.
     Rpc,
+    /// Start an interactive command prompt.
+    Interactive,
+}
+
+#[derive(Debug, Subcommand)]
+enum WifiCommands {
+    /// Show native Wi-Fi interface connection state.
+    Status {
+        /// Restrict the query to one Windows interface index.
+        #[arg(long)]
+        if_index: Option<u32>,
+    },
+    /// Scan for nearby native Wi-Fi networks.
+    Scan {
+        /// Restrict the scan to one Windows interface index.
+        #[arg(long)]
+        if_index: Option<u32>,
+        /// Return the cached network list without requesting a new scan.
+        #[arg(long)]
+        cached: bool,
+        /// Maximum time to wait for a native scan-complete notification.
+        #[arg(long, default_value_t = 4_000, value_parser = clap::value_parser!(u32).range(250..=15_000))]
+        timeout_ms: u32,
+    },
 }
 
 #[tokio::main]
@@ -105,13 +141,34 @@ async fn main() -> ExitCode {
 
 async fn run(args: Args) -> Result<(), String> {
     let client = Client::new(args.endpoint.clone());
-    if matches!(args.command, Commands::Rpc) {
-        return jsonrpc::serve(client, args.no_autostart).await;
+    match args.command {
+        Commands::Rpc => jsonrpc::serve(client, args.no_autostart).await,
+        Commands::Interactive => interactive::serve(client, args.no_autostart).await,
+        command => run_command(&client, command, args.no_autostart).await,
     }
-    let request = match args.command {
+}
+
+async fn run_command(client: &Client, command: Commands, no_autostart: bool) -> Result<(), String> {
+    let request = match command {
         Commands::Ping => Request::Ping,
         Commands::Capabilities => Request::Capabilities,
         Commands::Adapters => Request::ListAdapters,
+        Commands::Status => Request::NetworkStatus,
+        Commands::Wifi {
+            command: WifiCommands::Status { if_index },
+        } => Request::WifiStatus { if_index },
+        Commands::Wifi {
+            command:
+                WifiCommands::Scan {
+                    if_index,
+                    cached,
+                    timeout_ms,
+                },
+        } => Request::WifiScan {
+            if_index,
+            refresh: !cached,
+            timeout_ms,
+        },
         Commands::Validate { path, format } => {
             config_request(&path, ConfigAction::Validate, format.into(), true)?
         }
@@ -122,9 +179,11 @@ async fn run(args: Args) -> Result<(), String> {
             config_request(&path, ConfigAction::Apply, format.into(), !live)?
         }
         Commands::Job { job_id } => Request::JobStatus { job_id },
-        Commands::Rpc => return Err("internal command dispatch error".into()),
+        Commands::Rpc | Commands::Interactive => {
+            return Err("command is unavailable inside interactive dispatch".into());
+        }
     };
-    let response = call_with_autostart(&client, &request, args.no_autostart).await?;
+    let response = call_with_autostart(client, &request, no_autostart).await?;
     let value = jsonrpc::response_value(response)?;
     let rendered = serde_json::to_string_pretty(&value).map_err(|error| error.to_string())?;
     println!("{rendered}");

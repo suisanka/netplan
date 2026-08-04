@@ -1,6 +1,7 @@
 [package]
 name = "netplan"
 description = "Rust SDK and configuration model for PE Netplan"
+readme = "../../README.md"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

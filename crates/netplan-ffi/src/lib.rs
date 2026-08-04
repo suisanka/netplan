@@ -3,6 +3,10 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 #![deny(clippy::expect_used, clippy::unwrap_used)]
 
+#[cfg(windows)]
+#[global_allocator]
+static GLOBAL_ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 use std::ffi::{CStr, CString, c_char};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::ptr;

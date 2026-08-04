@@ -15,8 +15,14 @@ crate-type = ["cdylib", "staticlib"]
 doc = false
 
 [dependencies]
-netplan = { path = "../netplan" }
+netplan = { path = "../netplan", version = "0.1.0" }
 tokio.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+mimalloc.workspace = true
+
+[target.'cfg(all(windows, target_env = "msvc"))'.dependencies]
+vc-ltl.workspace = true
 
 [lints]
 workspace = true

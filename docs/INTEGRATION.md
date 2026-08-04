@@ -1,5 +1,7 @@
 # SDK and native integration
 
+English | [简体中文](zh-CN/INTEGRATION.md)
+
 ## Rust
 
 The `netplan` crate owns the configuration model, planner, verified protocol codec, and
@@ -19,6 +21,19 @@ assert!(matches!(response, Response::Pong { .. }));
 
 `Client::call` assigns and verifies correlation identifiers. `Client::call_frame` is
 the lower-level entry point for already encoded size-prefixed frames.
+
+An apply response can be `running`. Keep its `job_id` and call
+`Request::JobStatus { job_id }` until it reaches `succeeded`, `failed`, or
+`rolled_back`. `Request::ListJobs { state, limit }` returns newest-first summaries,
+including creation/update timestamps, and `Request::DaemonStatus` reports uptime and
+per-state counters. Jobs are daemon-memory state and do not survive a daemon restart.
+
+Read-only runtime queries use `Request::NetworkStatus`,
+`Request::WifiStatus { if_index }`, and
+`Request::WifiScan { if_index, refresh, timeout_ms }`. `NetworkStatus` preserves adapter
+state even if the optional Native Wi-Fi component is unavailable. A Wi-Fi scan response
+contains `refreshed` plus a sorted network list; `false` means cached results were read
+without observing a scan-complete notification.
 
 The default endpoint is `\\.\pipe\pe-netplan-netpland-v1` on Windows. Tests and Unix
 development use `/tmp/pe-netplan-netpland-v1.sock`. `NETPLAN_ENDPOINT` overrides the
@@ -47,18 +62,36 @@ behavior as documented in the header.
 ## Daemon protocol
 
 - Local transport only: Windows named pipe or Unix-domain development socket.
+- The Windows endpoint is administrator-only and rejects remote clients.
 - Little-endian, size-prefixed FlatBuffers envelope.
 - File identifier: `PNET`.
 - Protocol version: `1`.
 - Maximum frame body: 16 MiB.
 - One request and one correlated response per connection.
+- Status and job listing are native FlatBuffers calls; the daemon still does not parse
+  JSON-RPC.
+
+The v1 additions append union discriminators after the existing `ErrorResponse` value.
+Existing discriminator values 0 through 13 remain unchanged; network/Wi-Fi status and
+scan messages occupy the appended values 18 through 23.
 
 The checked-in Rust bindings were generated with `flatc` 25.12.19:
 
 ```console
-flatc --rust --gen-object-api -o crates/netplan/src/protocol schemas/ipc.fbs
+flatc --rust --gen-object-api --gen-name-strings -o crates/netplan/src/protocol schemas/ipc.fbs
 ```
 
-The generated module intentionally carries lint exemptions. Regeneration must preserve
-the module-level generated-code lint header and pass both native and Windows-target
-Clippy checks.
+The generated module intentionally carries lint exemptions plus `extern crate alloc`
+at the file, namespace, and inner-module scopes. The compiler does not reproduce those
+local header adjustments, so regeneration must preserve them and pass both native and
+Windows-target Clippy checks.
+
+## Windows runtime
+
+The `x86_64-pc-windows-msvc` configuration uses VC-LTL5 `5.3.1`, whose link search
+paths replace the MSVC runtime import libraries with the Windows-compatible VC-LTL
+variants. VC-LTL is target-gated and is not linked into GNU or non-Windows builds. The
+MSVC configuration is present but was not validated for this version.
+
+The CLI, daemon, and C DLL select mimalloc `0.1.52` as their Rust global allocator on
+Windows. The SDK crate deliberately leaves allocator selection to its host process.

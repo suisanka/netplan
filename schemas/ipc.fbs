@@ -131,6 +131,107 @@ table JobStatusResponse {
   message:string;
 }
 
+table DaemonStatusRequest {}
+
+table DaemonStatusResponse {
+  daemon_version:string (required);
+  protocol_version:uint;
+  started_at_unix_ms:ulong;
+  uptime_ms:ulong;
+  total_jobs:uint;
+  queued_jobs:uint;
+  running_jobs:uint;
+  succeeded_jobs:uint;
+  failed_jobs:uint;
+  rolled_back_jobs:uint;
+}
+
+table ListJobsRequest {
+  has_state:bool;
+  state:JobState;
+  limit:uint = 100;
+}
+
+table JobSummary {
+  job_id:string (required);
+  state:JobState;
+  message:string;
+  created_at_unix_ms:ulong;
+  updated_at_unix_ms:ulong;
+}
+
+table ListJobsResponse {
+  jobs:[JobSummary] (required);
+  total:uint;
+}
+
+table NetworkStatusRequest {}
+
+table WifiStatusRequest {
+  has_if_index:bool;
+  if_index:uint;
+}
+
+table WifiScanRequest {
+  has_if_index:bool;
+  if_index:uint;
+  refresh:bool = true;
+  timeout_ms:uint = 4000;
+}
+
+table WifiInterfaceStatus {
+  if_index:uint;
+  name:string (required);
+  guid:string;
+  state:string (required);
+  profile_name:string;
+  ssid:string;
+  ssid_hex:string;
+  has_signal_quality:bool;
+  signal_quality:ubyte;
+  has_security_enabled:bool;
+  security_enabled:bool;
+  authentication:string;
+  cipher:string;
+  has_rx_rate_kbps:bool;
+  rx_rate_kbps:uint;
+  has_tx_rate_kbps:bool;
+  tx_rate_kbps:uint;
+}
+
+table WifiNetwork {
+  interface_if_index:uint;
+  interface_name:string (required);
+  ssid:string (required);
+  ssid_hex:string (required);
+  profile_name:string;
+  signal_quality:ubyte;
+  security_enabled:bool;
+  authentication:string (required);
+  cipher:string (required);
+  connectable:bool;
+  has_not_connectable_reason:bool;
+  not_connectable_reason:uint;
+  connected:bool;
+  bss_count:uint;
+}
+
+table NetworkStatusResponse {
+  captured_at_unix_ms:ulong;
+  adapters:[Adapter] (required);
+  wifi_interfaces:[WifiInterfaceStatus] (required);
+  wifi_error:string;
+}
+
+table WifiStatusResponse {
+  interfaces:[WifiInterfaceStatus] (required);
+}
+
+table WifiScanResponse {
+  refreshed:bool;
+  networks:[WifiNetwork] (required);
+}
+
 table ErrorResponse {
   code:ErrorCode;
   message:string (required);
@@ -149,7 +250,17 @@ union Payload {
   ApplyConfigResponse,
   JobStatusRequest,
   JobStatusResponse,
-  ErrorResponse
+  ErrorResponse,
+  DaemonStatusRequest,
+  DaemonStatusResponse,
+  ListJobsRequest,
+  ListJobsResponse,
+  NetworkStatusRequest,
+  NetworkStatusResponse,
+  WifiStatusRequest,
+  WifiStatusResponse,
+  WifiScanRequest,
+  WifiScanResponse
 }
 
 table Envelope {
