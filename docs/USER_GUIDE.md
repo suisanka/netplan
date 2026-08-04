@@ -294,9 +294,13 @@ bounded to 250–15000 ms. `--cached` skips the scan. The response contains:
 `refreshed: false` means cached results were requested or no scan-complete notification
 arrived before the timeout; it does not mean that no networks exist. A native scan
 failure remains an error. With no `--if-index`, the status/scan CLI queries every Wi-Fi
-interface. Windows privacy policy can deny access to Wi-Fi discovery APIs; PE Netplan
-returns a typed `permission_denied` instead of silently returning an empty list. See
-Microsoft's [WlanScan](https://learn.microsoft.com/windows/win32/api/wlanapi/nf-wlanapi-wlanscan)
+interface reported by `WlanEnumInterfaces` and merges scan results. `--if-index` targets
+exactly one interface from that list; IP Helper wireless/virtual adapters outside the
+Native Wi-Fi list are not scanned. Windows privacy policy can deny access to Wi-Fi
+discovery APIs; PE Netplan returns a typed `permission_denied` instead of silently
+returning an empty list. See Microsoft's
+[WlanEnumInterfaces](https://learn.microsoft.com/windows/win32/api/wlanapi/nf-wlanapi-wlanenuminterfaces),
+[WlanScan](https://learn.microsoft.com/windows/win32/api/wlanapi/nf-wlanapi-wlanscan),
 and [WlanGetAvailableNetworkList](https://learn.microsoft.com/windows/win32/api/wlanapi/nf-wlanapi-wlangetavailablenetworklist)
 documentation for OS-level behavior.
 
@@ -662,7 +666,7 @@ daemon `ErrorResponse`. See [include/netplan.h](../include/netplan.h) and the co
 | `permission_denied` opening the pipe | Confirm the UAC prompt was accepted; for `netplan rpc`, launch its host elevated; otherwise review the daemon account/pipe ACL |
 | Wi-Fi `permission_denied` | Review Windows Wi-Fi/location privacy policy and service state |
 | `unsupported` | Run `capabilities`; add the missing image component/service or omit that operation |
-| Wi-Fi `not_found` | Confirm a wireless adapter and driver exist and are visible to IP Helper/Native Wi-Fi |
+| Wi-Fi `not_found` | Confirm the adapter is enabled and appears in the Native Wi-Fi interface list (`netsh wlan show interfaces`) |
 | `refreshed: false` | Retry with a longer bounded timeout; the returned list may be cached |
 | Selector ambiguous | Add `if_index`, GUID, or another exact field; all supplied fields must identify one adapter |
 | Protected-interface rejection | Move the operation to a non-management adapter; do not remove protection during a remote session |

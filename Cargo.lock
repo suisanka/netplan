@@ -331,7 +331,7 @@ dependencies = [
 
 [[package]]
 name = "netplan"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "flatbuffers",
  "ipnet",
@@ -345,7 +345,7 @@ dependencies = [
 
 [[package]]
 name = "netplan-cli"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "clap",
  "mimalloc",
@@ -359,7 +359,7 @@ dependencies = [
 
 [[package]]
 name = "netplan-ffi"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "mimalloc",
  "netplan",
@@ -369,7 +369,7 @@ dependencies = [
 
 [[package]]
 name = "netpland"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "clap",
  "ipnet",

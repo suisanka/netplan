@@ -86,7 +86,9 @@ connection state; it is not an Internet reachability test. `wifi scan` waits up 
 seconds for the Native Wi-Fi scan-complete notification and then returns the available
 network list. Its `refreshed` field is `false` when the cached list was requested or no
 completion notification arrived before the timeout. Use `--if-index` to select one
-wireless interface and `--timeout-ms` to change the bounded 250–15000 ms wait.
+exact Native Wi-Fi interface; without it, every enabled interface reported by
+`WlanEnumInterfaces` is scanned and the results are merged. Use `--timeout-ms` to change
+the bounded 250–15000 ms wait.
 
 Interactive mode accepts the same subcommands without repeating `netplan.exe`, supports
 quoted Windows paths, and exits with `exit` or `quit`.

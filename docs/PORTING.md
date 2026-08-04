@@ -15,7 +15,7 @@ verification note rather than pretending unavailable test hardware was exercised
 | DNS/gateway/WINS | Ordered native inventory plus `netsh` apply/restore | Build/plan; empty DNS/WINS and no-gateway live |
 | Adapter state | Enable, disable and restart with reverse-order rollback | Disable/enable live |
 | MAC override | Adapter-class `NetworkAddress` registry value plus adapter restart; previous value restored | Override and forced rollback live |
-| Wi-Fi | Runtime-loaded Native Wi-Fi API; current interface/link status, ACM-completed available-network scans, open/WPA2/WPA3 profile XML, connect, disconnect, previous profile/connection rollback | GNU target Clippy/build and typed tests; physical WLAN scan still required |
+| Wi-Fi | Runtime-loaded Native Wi-Fi API; `WlanEnumInterfaces` source-of-truth selection, exact `if_index` or all-interface scan aggregation, current link status, profiles/connect/disconnect, and rollback | GNU target Clippy/build and typed selection tests; physical WLAN scan still required |
 | SMB accounts | NetAPI local-user create-if-absent; existing passwords are never changed because they cannot be captured for lossless rollback | Create and forced rollback live |
 | SMB shares | NetAPI level 502 create/update and level 1501 ACL restore; Everyone or named local-account ACLs | Create and forced rollback live |
 | SMB mappings | MPR add/cancel with in-memory credentials; conflicting drive mappings fail closed | API/capability verified; no remote SMB fixture was available |

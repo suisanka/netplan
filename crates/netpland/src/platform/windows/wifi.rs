@@ -14,6 +14,10 @@ use std::time::{Duration, Instant};
 use netplan::config::{SecretRef, WifiAuthentication, WifiProfile};
 use netplan::{WifiInterfaceStatus, WifiNetwork};
 use windows::Win32::Foundation::{FreeLibrary, HANDLE, HMODULE};
+use windows::Win32::NetworkManagement::IpHelper::{
+    ConvertInterfaceGuidToLuid, ConvertInterfaceLuidToIndex,
+};
+use windows::Win32::NetworkManagement::Ndis::NET_LUID_LH;
 use windows::Win32::NetworkManagement::WiFi::{
     DOT11_AUTH_ALGO_80211_OPEN, DOT11_AUTH_ALGO_80211_SHARED_KEY, DOT11_AUTH_ALGO_OWE,
     DOT11_AUTH_ALGO_RSNA, DOT11_AUTH_ALGO_RSNA_PSK, DOT11_AUTH_ALGO_WPA, DOT11_AUTH_ALGO_WPA_NONE,
@@ -25,14 +29,14 @@ use windows::Win32::NetworkManagement::WiFi::{
     DOT11_CIPHER_ALGO_TKIP, DOT11_CIPHER_ALGO_WEP, DOT11_CIPHER_ALGO_WEP40,
     DOT11_CIPHER_ALGO_WEP104, DOT11_CIPHER_ALGORITHM, DOT11_SSID, L2_NOTIFICATION_DATA,
     WLAN_AVAILABLE_NETWORK, WLAN_AVAILABLE_NETWORK_CONNECTED, WLAN_AVAILABLE_NETWORK_LIST,
-    WLAN_CONNECTION_ATTRIBUTES, WLAN_CONNECTION_PARAMETERS, WLAN_INTERFACE_STATE, WLAN_INTF_OPCODE,
-    WLAN_NOTIFICATION_SOURCE_ACM, WLAN_NOTIFICATION_SOURCE_NONE, WLAN_NOTIFICATION_SOURCES,
-    dot11_BSS_type_infrastructure, wlan_connection_mode_profile,
-    wlan_interface_state_ad_hoc_network_formed, wlan_interface_state_associating,
-    wlan_interface_state_authenticating, wlan_interface_state_connected,
-    wlan_interface_state_disconnected, wlan_interface_state_disconnecting,
-    wlan_interface_state_discovering, wlan_interface_state_not_ready,
-    wlan_intf_opcode_current_connection, wlan_intf_opcode_interface_state,
+    WLAN_CONNECTION_ATTRIBUTES, WLAN_CONNECTION_PARAMETERS, WLAN_INTERFACE_INFO_LIST,
+    WLAN_INTERFACE_STATE, WLAN_INTF_OPCODE, WLAN_NOTIFICATION_SOURCE_ACM,
+    WLAN_NOTIFICATION_SOURCE_NONE, WLAN_NOTIFICATION_SOURCES, dot11_BSS_type_infrastructure,
+    wlan_connection_mode_profile, wlan_interface_state_ad_hoc_network_formed,
+    wlan_interface_state_associating, wlan_interface_state_authenticating,
+    wlan_interface_state_connected, wlan_interface_state_disconnected,
+    wlan_interface_state_disconnecting, wlan_interface_state_discovering,
+    wlan_interface_state_not_ready, wlan_intf_opcode_current_connection,
     wlan_notification_acm_scan_complete, wlan_notification_acm_scan_fail,
 };
 use windows::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW};
@@ -53,6 +57,8 @@ const HEX: &[u8; 16] = b"0123456789ABCDEF";
 type WlanOpenHandleFn = unsafe extern "system" fn(u32, *const c_void, *mut u32, *mut HANDLE) -> u32;
 type WlanCloseHandleFn = unsafe extern "system" fn(HANDLE, *const c_void) -> u32;
 type WlanFreeMemoryFn = unsafe extern "system" fn(*const c_void);
+type WlanEnumInterfacesFn =
+    unsafe extern "system" fn(HANDLE, *const c_void, *mut *mut WLAN_INTERFACE_INFO_LIST) -> u32;
 type WlanGetProfileFn = unsafe extern "system" fn(
     HANDLE,
     *const GUID,
@@ -114,9 +120,28 @@ type WlanRegisterNotificationFn = unsafe extern "system" fn(
     *mut u32,
 ) -> u32;
 
-/// Confirm that both the optional DLL and the `AutoConfig` service are usable.
+/// Confirm that the optional DLL, `AutoConfig` service, and an enabled WLAN interface are usable.
 pub(super) fn probe() -> Result<(), String> {
-    Client::open().map(drop).map_err(|error| error.message)
+    (|| {
+        let client = Client::open()?;
+        let interfaces = client.interfaces()?;
+        if interfaces.is_empty() {
+            Err(PlatformError::not_found(
+                "no enabled Native Wi-Fi interface was discovered",
+            ))
+        } else {
+            Ok(())
+        }
+    })()
+    .map_err(|error| error.message)
+}
+
+#[derive(Clone, Debug)]
+pub(super) struct Interface {
+    pub(super) guid: GUID,
+    pub(super) if_index: u32,
+    pub(super) description: String,
+    pub(super) state: WLAN_INTERFACE_STATE,
 }
 
 pub(super) struct Client {
@@ -124,6 +149,7 @@ pub(super) struct Client {
     handle: HANDLE,
     close_handle: WlanCloseHandleFn,
     free_memory: WlanFreeMemoryFn,
+    enum_interfaces: WlanEnumInterfacesFn,
     get_profile: WlanGetProfileFn,
     set_profile: WlanSetProfileFn,
     delete_profile: WlanDeleteProfileFn,
@@ -148,6 +174,8 @@ impl Client {
             let open_handle = load_symbol::<WlanOpenHandleFn>(library, b"WlanOpenHandle\0")?;
             let close_handle = load_symbol::<WlanCloseHandleFn>(library, b"WlanCloseHandle\0")?;
             let free_memory = load_symbol::<WlanFreeMemoryFn>(library, b"WlanFreeMemory\0")?;
+            let enum_interfaces =
+                load_symbol::<WlanEnumInterfacesFn>(library, b"WlanEnumInterfaces\0")?;
             let get_profile = load_symbol::<WlanGetProfileFn>(library, b"WlanGetProfile\0")?;
             let set_profile = load_symbol::<WlanSetProfileFn>(library, b"WlanSetProfile\0")?;
             let delete_profile =
@@ -180,6 +208,7 @@ impl Client {
                 handle,
                 close_handle,
                 free_memory,
+                enum_interfaces,
                 get_profile,
                 set_profile,
                 delete_profile,
@@ -195,6 +224,45 @@ impl Client {
             // SAFETY: `library` was successfully loaded above and ownership has not moved.
             let _ = unsafe { FreeLibrary(library) };
         }
+        result
+    }
+
+    pub(super) fn interfaces(&self) -> PlatformResult<Vec<Interface>> {
+        let mut list = ptr::null_mut::<WLAN_INTERFACE_INFO_LIST>();
+        // SAFETY: The client handle is valid, the reserved pointer is null, and `list` is a
+        // writable output pointer. A successful WLAN allocation is released below.
+        let code = unsafe { (self.enum_interfaces)(self.handle, ptr::null(), &raw mut list) };
+        wlan_result("WlanEnumInterfaces", code)?;
+        if list.is_null() {
+            return Err(PlatformError::internal(
+                "WlanEnumInterfaces returned a null interface list",
+            ));
+        }
+        let result = (|| {
+            // SAFETY: The API returned a WLAN-owned list allocation on success.
+            let count = unsafe { (*list).dwNumberOfItems };
+            if count > 256 {
+                return Err(PlatformError::internal(
+                    "Native Wi-Fi interface list exceeded the traversal limit",
+                ));
+            }
+            let mut interfaces = Vec::with_capacity(usize::try_from(count).unwrap_or_default());
+            // SAFETY: `InterfaceInfo` is the first item of the variable-size API allocation.
+            let first = unsafe { (*list).InterfaceInfo.as_ptr() };
+            for index in 0..count {
+                // SAFETY: The API guarantees `dwNumberOfItems` contiguous interface records.
+                let info = unsafe { &*first.add(index as usize) };
+                interfaces.push(Interface {
+                    guid: info.InterfaceGuid,
+                    if_index: interface_index(&info.InterfaceGuid)?,
+                    description: fixed_wide(&info.strInterfaceDescription)?,
+                    state: info.isState,
+                });
+            }
+            Ok(interfaces)
+        })();
+        // SAFETY: `list` is the WLAN allocation returned above and is released exactly once.
+        unsafe { (self.free_memory)(list.cast()) };
         result
     }
 
@@ -362,11 +430,11 @@ impl Client {
     pub(super) fn interface_status(
         &self,
         interface: &GUID,
+        state: WLAN_INTERFACE_STATE,
         if_index: u32,
         name: &str,
         guid: Option<String>,
     ) -> PlatformResult<WifiInterfaceStatus> {
-        let state = self.interface_state(interface)?;
         let connection = self.current_connection(interface)?;
         let connected = connection
             .as_ref()
@@ -446,37 +514,6 @@ impl Client {
                 .map(|attributes| fixed_wide(&attributes.strProfileName))
                 .transpose()
         })
-    }
-
-    fn interface_state(&self, interface: &GUID) -> PlatformResult<WLAN_INTERFACE_STATE> {
-        let mut bytes = 0_u32;
-        let mut data = ptr::null_mut::<c_void>();
-        // SAFETY: All output pointers are writable and successful API memory is released below.
-        let code = unsafe {
-            (self.query_interface)(
-                self.handle,
-                interface,
-                wlan_intf_opcode_interface_state,
-                ptr::null(),
-                &raw mut bytes,
-                &raw mut data,
-                ptr::null_mut(),
-            )
-        };
-        wlan_result("WlanQueryInterface(interface_state)", code)?;
-        let result = if data.is_null()
-            || usize::try_from(bytes).unwrap_or_default() < size_of::<WLAN_INTERFACE_STATE>()
-        {
-            Err(PlatformError::internal(
-                "WlanQueryInterface returned a truncated interface state",
-            ))
-        } else {
-            // SAFETY: The size check covers the complete fixed-size state value.
-            Ok(unsafe { data.cast::<WLAN_INTERFACE_STATE>().read_unaligned() })
-        };
-        // SAFETY: `data` is the WLAN allocation returned by WlanQueryInterface and is freed once.
-        unsafe { (self.free_memory)(data) };
-        result
     }
 
     fn current_connection(
@@ -895,6 +932,19 @@ fn fixed_wide(value: &[u16]) -> PlatformResult<String> {
     String::from_utf16(&value[..end]).map_err(|error| {
         PlatformError::internal(format!("Native Wi-Fi returned invalid UTF-16: {error}"))
     })
+}
+
+fn interface_index(guid: &GUID) -> PlatformResult<u32> {
+    let mut luid = NET_LUID_LH::default();
+    // SAFETY: Both pointers reference complete, initialized GUID/LUID storage for this call.
+    let guid_code = unsafe { ConvertInterfaceGuidToLuid(guid, &raw mut luid) };
+    wlan_result("ConvertInterfaceGuidToLuid", guid_code.0)?;
+    let mut if_index = 0_u32;
+    // SAFETY: `luid` was initialized by the successful conversion above and the index output is
+    // writable for the duration of this call.
+    let index_code = unsafe { ConvertInterfaceLuidToIndex(&raw const luid, &raw mut if_index) };
+    wlan_result("ConvertInterfaceLuidToIndex", index_code.0)?;
+    Ok(if_index)
 }
 
 fn wide(value: &str) -> Vec<u16> {

@@ -89,7 +89,8 @@ Adapter selector 接受下列一个或多个字段；所有已提供字段都必
 Name、GUID、MAC 与 description 匹配都不区分大小写；MAC 的 `:` 与 `-` 分隔符等价。
 没有匹配返回 `-32004`；多个匹配返回 `-32009`，并附带精简候选 ID。
 
-Wi-Fi status 与 scan 可以限制到一个 Windows interface index。Scan 接受：
+Wi-Fi status 与 scan 使用 `WlanEnumInterfaces` 返回的已启用接口。省略 `if_index` 时会
+查询/扫描全部接口并合并扫描结果；提供时则只操作该精确 Native Wi-Fi interface。Scan 接受：
 
 ```json
 {

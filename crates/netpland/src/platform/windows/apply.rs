@@ -33,7 +33,7 @@ use windows::core::{BOOL, PCSTR, PCWSTR, PWSTR};
 
 use super::super::{ApplyReport, PlatformError, PlatformResult};
 use super::{
-    AdapterSnapshot, canonical_mac, enumerate_inventory, resolve_adapter, resolve_wifi_adapter,
+    AdapterSnapshot, canonical_mac, enumerate_inventory, resolve_adapter, resolve_wifi_interface,
     smb, wifi,
 };
 
@@ -204,14 +204,10 @@ fn apply_wifi(config: &NetplanConfig, rollback: &mut Vec<RollbackAction>) -> Pla
         PlatformError::internal(format!("Wi-Fi apply inventory failed: {error}"))
     })?;
     let client = wifi::Client::open()?;
+    let interfaces = client.interfaces()?;
     for profile in &config.wifi {
-        let adapter = resolve_wifi_adapter(&inventory, profile.selector.as_ref())?;
-        let interface = adapter.interface_guid.ok_or_else(|| {
-            PlatformError::not_found(format!(
-                "Wi-Fi adapter if_index={} has no Native Wi-Fi interface GUID",
-                adapter.info.if_index
-            ))
-        })?;
+        let interface =
+            resolve_wifi_interface(&inventory, &interfaces, profile.selector.as_ref())?.guid;
         let name = wifi::profile_name(profile).to_owned();
         let previous_xml = client.get_profile(&interface, &name)?;
         rollback.push(RollbackAction::Wifi(wifi::Rollback::Profile {
@@ -227,13 +223,7 @@ fn apply_wifi(config: &NetplanConfig, rollback: &mut Vec<RollbackAction>) -> Pla
             | WifiAction::Connect { selector, .. }
             | WifiAction::Disconnect { selector } => selector.as_ref(),
         };
-        let adapter = resolve_wifi_adapter(&inventory, selector)?;
-        let interface = adapter.interface_guid.ok_or_else(|| {
-            PlatformError::not_found(format!(
-                "Wi-Fi adapter if_index={} has no Native Wi-Fi interface GUID",
-                adapter.info.if_index
-            ))
-        })?;
+        let interface = resolve_wifi_interface(&inventory, &interfaces, selector)?.guid;
         match action {
             WifiAction::Scan { .. } => client.scan(&interface)?,
             WifiAction::Connect { profile, .. } => {

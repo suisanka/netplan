@@ -277,8 +277,11 @@ authentication/cipher、安全状态以及 RX/TX rate。
 
 `refreshed: false` 表示请求了缓存，或超时前未收到扫描完成通知；它不表示附近没有网络。
 原生扫描失败仍然是 error。不提供 `--if-index` 时，只读 status/scan CLI 会查询所有
-Wi-Fi interface。Windows 隐私策略可能拒绝 Wi-Fi discovery API；PE Netplan 会返回
-typed `permission_denied`，而不是伪装成空列表。OS 层行为见 Microsoft 的
+`WlanEnumInterfaces` 返回的已启用 Wi-Fi interface，并合并扫描结果。`--if-index` 只操作
+其中一个精确接口；不在 Native Wi-Fi 清单内的 IP Helper 无线/虚拟 adapter 不会被扫描。
+Windows 隐私策略可能拒绝 Wi-Fi discovery API；PE Netplan 会返回 typed
+`permission_denied`，而不是伪装成空列表。OS 层行为见 Microsoft 的
+[WlanEnumInterfaces](https://learn.microsoft.com/windows/win32/api/wlanapi/nf-wlanapi-wlanenuminterfaces)、
 [WlanScan](https://learn.microsoft.com/windows/win32/api/wlanapi/nf-wlanapi-wlanscan)
 和 [WlanGetAvailableNetworkList](https://learn.microsoft.com/windows/win32/api/wlanapi/nf-wlanapi-wlangetavailablenetworklist)
 文档。
@@ -628,7 +631,7 @@ Transport status 非零后通过 `netplan_client_last_error` 复制错误消息�
 | 打开 pipe 时 `permission_denied` | 确认已同意 UAC；`netplan rpc` 的宿主需先提权；否则检查 daemon account/pipe ACL |
 | Wi-Fi `permission_denied` | 检查 Windows Wi-Fi/location 隐私策略与 service 状态 |
 | `unsupported` | 运行 `capabilities`；向镜像添加缺失组件/service，或移除该 operation |
-| Wi-Fi `not_found` | 确认无线 adapter 与驱动存在，并可被 IP Helper/Native Wi-Fi 看到 |
+| Wi-Fi `not_found` | 确认无线 adapter 已启用，并出现在 Native Wi-Fi interface 清单中（`netsh wlan show interfaces`） |
 | `refreshed: false` | 在有界范围内增加 timeout 后重试；当前列表可能来自缓存 |
 | Selector ambiguous | 添加 `if_index`、GUID 或其他精确字段；所有字段必须共同锁定一个 adapter |
 | 受保护接口被拒绝 | 把操作移到非管理接口；远程 session 中不要移除保护 |

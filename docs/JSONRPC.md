@@ -95,8 +95,9 @@ Names, GUIDs, MAC addresses, and description matching are case-insensitive. MAC 
 `-` separators are equivalent. Zero matches returns `-32004`; multiple matches returns
 `-32009` with compact candidate identifiers.
 
-Wi-Fi status and scanning can be restricted to one Windows interface index. A scan
-accepts:
+Wi-Fi status and scanning use the enabled interfaces returned by `WlanEnumInterfaces`.
+Omitting `if_index` queries/scans all of them and merges scan results; supplying it
+restricts the operation to that exact Native Wi-Fi interface. A scan accepts:
 
 ```json
 {

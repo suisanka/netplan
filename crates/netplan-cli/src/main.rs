@@ -131,13 +131,13 @@ enum Commands {
 enum WifiCommands {
     /// Show native Wi-Fi interface connection state.
     Status {
-        /// Restrict the query to one Windows interface index.
+        /// Query one exact interface index; omit to query all Native Wi-Fi interfaces.
         #[arg(long)]
         if_index: Option<u32>,
     },
     /// Scan for nearby native Wi-Fi networks.
     Scan {
-        /// Restrict the scan to one Windows interface index.
+        /// Scan one exact interface index; omit to scan all Native Wi-Fi interfaces.
         #[arg(long)]
         if_index: Option<u32>,
         /// Return the cached network list without requesting a new scan.

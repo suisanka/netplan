@@ -39,8 +39,6 @@ const FILTER_INTERFACE: u8 = 1 << 1;
 impl Platform for WindowsPlatform {
     #[allow(clippy::too_many_lines)]
     fn capabilities(&self) -> Vec<Capability> {
-        let inventory = enumerate_inventory().unwrap_or_default();
-        let has_wifi = inventory.has_wifi;
         let has_netsh = apply::netsh_available();
         let has_pnputil = apply::pnputil_available();
         let mut capabilities = vec![
@@ -128,7 +126,7 @@ impl Platform for WindowsPlatform {
             (!has_force_driver)
                 .then_some("newdev.dll force-install backend is unavailable in this image"),
         ));
-        let wifi_probe = has_wifi.then(wifi::probe).transpose();
+        let wifi_probe = wifi::probe();
         for name in [
             "wifi.status",
             "wifi.profile.apply",
@@ -136,10 +134,9 @@ impl Platform for WindowsPlatform {
             "wifi.connect",
             "wifi.disconnect",
         ] {
-            let wifi_available = matches!(wifi_probe, Ok(Some(())));
+            let wifi_available = wifi_probe.is_ok();
             let reason = match &wifi_probe {
-                Ok(Some(())) => None,
-                Ok(None) => Some("no wireless adapter was discovered"),
+                Ok(()) => None,
                 Err(reason) => Some(reason.as_str()),
             };
             capabilities.push(capability(
@@ -199,22 +196,25 @@ impl Platform for WindowsPlatform {
         let inventory = enumerate_inventory().map_err(|error| {
             PlatformError::internal(format!("Wi-Fi status inventory failed: {error}"))
         })?;
-        let adapters = select_wifi_adapters(&inventory, if_index)?;
         let client = wifi::Client::open()?;
-        adapters
+        let interfaces = client.interfaces()?;
+        select_wifi_interfaces(&interfaces, if_index)?
             .into_iter()
-            .map(|adapter| {
-                let interface = adapter.interface_guid.ok_or_else(|| {
-                    PlatformError::internal(format!(
-                        "Wi-Fi interface if_index={} has no native GUID",
-                        adapter.info.if_index
-                    ))
-                })?;
+            .map(|interface| {
+                let adapter = inventory
+                    .adapters
+                    .iter()
+                    .find(|adapter| adapter.info.if_index == interface.if_index);
+                let name = adapter
+                    .map(|adapter| adapter.info.name.as_str())
+                    .filter(|name| !name.is_empty())
+                    .unwrap_or(&interface.description);
                 client.interface_status(
-                    &interface,
-                    adapter.info.if_index,
-                    &adapter.info.name,
-                    adapter.info.guid.clone(),
+                    &interface.guid,
+                    interface.state,
+                    interface.if_index,
+                    name,
+                    adapter.and_then(|adapter| adapter.info.guid.clone()),
                 )
             })
             .collect()
@@ -229,24 +229,25 @@ impl Platform for WindowsPlatform {
         let inventory = enumerate_inventory().map_err(|error| {
             PlatformError::internal(format!("Wi-Fi scan inventory failed: {error}"))
         })?;
-        let adapters = select_wifi_adapters(&inventory, if_index)?;
         let client = wifi::Client::open()?;
+        let interfaces = client.interfaces()?;
         let mut refreshed = refresh;
         let mut networks = Vec::new();
-        for adapter in adapters {
-            let interface = adapter.interface_guid.ok_or_else(|| {
-                PlatformError::internal(format!(
-                    "Wi-Fi interface if_index={} has no native GUID",
-                    adapter.info.if_index
-                ))
-            })?;
+        for interface in select_wifi_interfaces(&interfaces, if_index)? {
+            let name = inventory
+                .adapters
+                .iter()
+                .find(|adapter| adapter.info.if_index == interface.if_index)
+                .map(|adapter| adapter.info.name.as_str())
+                .filter(|name| !name.is_empty())
+                .unwrap_or(&interface.description);
             if refresh {
-                refreshed &= client.scan_and_wait(&interface, timeout)?;
+                refreshed &= client.scan_and_wait(&interface.guid, timeout)?;
             }
             networks.extend(client.available_networks(
-                &interface,
-                adapter.info.if_index,
-                &adapter.info.name,
+                &interface.guid,
+                interface.if_index,
+                name,
             )?);
         }
         networks.sort_by(|left, right| {
@@ -265,7 +266,12 @@ impl Platform for WindowsPlatform {
         let inventory = enumerate_inventory().map_err(|error| {
             PlatformError::internal(format!("adapter preflight inventory failed: {error}"))
         })?;
-        validate_runtime_protection(config, &inventory)
+        let interfaces = if config.wifi.is_empty() && config.wifi_actions.is_empty() {
+            Vec::new()
+        } else {
+            wifi::Client::open()?.interfaces()?
+        };
+        validate_runtime_protection(config, &inventory, &interfaces)
     }
 
     fn apply(&self, config: &NetplanConfig) -> PlatformResult<ApplyReport> {
@@ -273,40 +279,34 @@ impl Platform for WindowsPlatform {
     }
 }
 
-fn select_wifi_adapters(
-    inventory: &AdapterInventory,
+fn select_wifi_interfaces(
+    interfaces: &[wifi::Interface],
     if_index: Option<u32>,
-) -> PlatformResult<Vec<&AdapterSnapshot>> {
+) -> PlatformResult<Vec<&wifi::Interface>> {
     if let Some(if_index) = if_index {
-        let adapter = inventory
-            .adapters
+        let interface = interfaces
             .iter()
-            .find(|adapter| adapter.info.if_index == if_index)
+            .find(|interface| interface.if_index == if_index)
             .ok_or_else(|| {
-                PlatformError::not_found(format!("no interface exists with if_index={if_index}"))
+                PlatformError::not_found(format!(
+                    "no enabled Native Wi-Fi interface exists with if_index={if_index}"
+                ))
             })?;
-        if !adapter.is_wifi {
-            return Err(PlatformError::invalid_config(format!(
-                "if_index={if_index} is not a Wi-Fi interface"
-            )));
-        }
-        return Ok(vec![adapter]);
+        return Ok(vec![interface]);
     }
-    let adapters: Vec<_> = inventory
-        .adapters
-        .iter()
-        .filter(|adapter| adapter.is_wifi)
-        .collect();
-    if adapters.is_empty() {
-        Err(PlatformError::not_found("no Wi-Fi interface is available"))
+    if interfaces.is_empty() {
+        Err(PlatformError::not_found(
+            "no enabled Native Wi-Fi interface is available",
+        ))
     } else {
-        Ok(adapters)
+        Ok(interfaces.iter().collect())
     }
 }
 
 fn validate_runtime_protection(
     config: &NetplanConfig,
     inventory: &AdapterInventory,
+    wifi_interfaces: &[wifi::Interface],
 ) -> PlatformResult<()> {
     let protected: Vec<u32> = config
         .protect
@@ -326,9 +326,7 @@ fn validate_runtime_protection(
     }
     for profile in &config.wifi {
         targets.push(
-            resolve_wifi_adapter(inventory, profile.selector.as_ref())?
-                .info
-                .if_index,
+            resolve_wifi_interface(inventory, wifi_interfaces, profile.selector.as_ref())?.if_index,
         );
     }
     for action in &config.wifi_actions {
@@ -337,7 +335,7 @@ fn validate_runtime_protection(
             | WifiAction::Connect { selector, .. }
             | WifiAction::Disconnect { selector } => selector.as_ref(),
         };
-        targets.push(resolve_wifi_adapter(inventory, selector)?.info.if_index);
+        targets.push(resolve_wifi_interface(inventory, wifi_interfaces, selector)?.if_index);
     }
     for operation in &config.drivers {
         if let DriverOperation::RestartAdapter { selector } = operation {
@@ -355,28 +353,32 @@ fn validate_runtime_protection(
     Ok(())
 }
 
-fn resolve_wifi_adapter<'a>(
-    inventory: &'a AdapterInventory,
+fn resolve_wifi_interface<'a>(
+    inventory: &AdapterInventory,
+    interfaces: &'a [wifi::Interface],
     selector: Option<&InterfaceSelector>,
-) -> PlatformResult<&'a AdapterSnapshot> {
+) -> PlatformResult<&'a wifi::Interface> {
     if let Some(selector) = selector {
         let adapter = resolve_adapter(inventory, selector)?;
-        if adapter.is_wifi {
-            Ok(adapter)
-        } else {
-            Err(PlatformError::invalid_config(format!(
-                "selector resolves to non-Wi-Fi interface if_index={}",
-                adapter.info.if_index
-            )))
-        }
+        interfaces
+            .iter()
+            .find(|interface| interface.if_index == adapter.info.if_index)
+            .ok_or_else(|| {
+                PlatformError::invalid_config(format!(
+                    "selector resolves to interface if_index={}, which is not exposed by Native Wi-Fi",
+                    adapter.info.if_index
+                ))
+            })
     } else {
-        let mut matches = inventory.adapters.iter().filter(|adapter| adapter.is_wifi);
+        let mut matches = interfaces.iter();
         let Some(first) = matches.next() else {
-            return Err(PlatformError::not_found("no Wi-Fi interface is available"));
+            return Err(PlatformError::not_found(
+                "no enabled Native Wi-Fi interface is available",
+            ));
         };
         if matches.next().is_some() {
             return Err(PlatformError::invalid_config(
-                "multiple Wi-Fi interfaces are available; an explicit selector is required",
+                "multiple Native Wi-Fi interfaces are available; an explicit selector is required",
             ));
         }
         Ok(first)
@@ -446,14 +448,11 @@ fn canonical_mac(value: &str) -> String {
 #[derive(Default)]
 struct AdapterInventory {
     adapters: Vec<AdapterSnapshot>,
-    has_wifi: bool,
 }
 
 #[derive(Clone, Debug)]
 struct AdapterSnapshot {
     info: AdapterInfo,
-    interface_guid: Option<windows::core::GUID>,
-    is_wifi: bool,
     admin_enabled: bool,
     dhcp_enabled: bool,
     manual_ipv4: Vec<IpAddressInfo>,
@@ -526,10 +525,9 @@ fn collect_adapters(
     end: usize,
 ) -> Result<AdapterInventory> {
     let mut adapters = Vec::new();
-    let mut has_wifi = false;
     for _ in 0..4096 {
         if pointer.is_null() {
-            return Ok(AdapterInventory { adapters, has_wifi });
+            return Ok(AdapterInventory { adapters });
         }
         ensure_in_buffer(pointer, base, end)?;
         // SAFETY: `ensure_in_buffer` verified that the full adapter structure is within the
@@ -542,7 +540,6 @@ fn collect_adapters(
             hardware: matches!(adapter.IfType, IF_TYPE_ETHERNET_CSMACD | IF_TYPE_IEEE80211),
             filter: false,
             admin_enabled: adapter.OperStatus != IfOperStatusNotPresent,
-            interface_guid: None,
         });
         if details.filter
             || adapter.IfType == IF_TYPE_SOFTWARE_LOOPBACK
@@ -551,7 +548,6 @@ fn collect_adapters(
             pointer = next;
             continue;
         }
-        has_wifi |= adapter.IfType == IF_TYPE_IEEE80211;
         let name =
             wide_string(adapter.FriendlyName).unwrap_or_else(|| format!("ifIndex {if_index}"));
         let description = wide_string(adapter.Description).filter(|value| !value.is_empty());
@@ -576,8 +572,6 @@ fn collect_adapters(
         };
         adapters.push(AdapterSnapshot {
             info,
-            interface_guid: details.interface_guid,
-            is_wifi: adapter.IfType == IF_TYPE_IEEE80211,
             admin_enabled: details.admin_enabled,
             dhcp_enabled: flags & IP_ADAPTER_DHCP_ENABLED != 0,
             manual_ipv4,
@@ -596,7 +590,6 @@ struct InterfaceDetails {
     hardware: bool,
     filter: bool,
     admin_enabled: bool,
-    interface_guid: Option<windows::core::GUID>,
 }
 
 fn interface_details(if_index: u32) -> Option<InterfaceDetails> {
@@ -615,7 +608,6 @@ fn interface_details(if_index: u32) -> Option<InterfaceDetails> {
         hardware: flags & HARDWARE_INTERFACE != 0,
         filter: flags & FILTER_INTERFACE != 0,
         admin_enabled: row.AdminStatus == NET_IF_ADMIN_STATUS_UP,
-        interface_guid: Some(row.InterfaceGuid),
     })
 }
 
@@ -847,4 +839,62 @@ fn oper_status(status: windows::Win32::NetworkManagement::Ndis::IF_OPER_STATUS) 
 fn os_error(code: u32) -> Error {
     let raw = i32::try_from(code).unwrap_or(i32::MAX);
     Error::Io(std::io::Error::from_raw_os_error(raw))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::platform::PlatformErrorKind;
+    use windows::Win32::NetworkManagement::WiFi::wlan_interface_state_disconnected;
+    use windows::core::GUID;
+
+    fn native_interface(if_index: u32) -> wifi::Interface {
+        wifi::Interface {
+            guid: GUID::from_u128(u128::from(if_index)),
+            if_index,
+            description: format!("Wi-Fi {if_index}"),
+            state: wlan_interface_state_disconnected,
+        }
+    }
+
+    #[test]
+    fn wifi_scan_without_selector_targets_every_native_interface() {
+        let interfaces = [native_interface(7), native_interface(12)];
+
+        let Ok(selected) = select_wifi_interfaces(&interfaces, None) else {
+            panic!("all native interfaces should be selected");
+        };
+
+        assert_eq!(
+            selected
+                .iter()
+                .map(|interface| interface.if_index)
+                .collect::<Vec<_>>(),
+            vec![7, 12]
+        );
+    }
+
+    #[test]
+    fn wifi_scan_if_index_targets_one_exact_native_interface() {
+        let interfaces = [native_interface(7), native_interface(12)];
+
+        let Ok(selected) = select_wifi_interfaces(&interfaces, Some(12)) else {
+            panic!("the requested native interface should be selected");
+        };
+
+        assert_eq!(selected.len(), 1);
+        assert_eq!(selected[0].if_index, 12);
+    }
+
+    #[test]
+    fn wifi_scan_rejects_an_index_outside_native_wifi_inventory() {
+        let interfaces = [native_interface(7)];
+
+        let Err(error) = select_wifi_interfaces(&interfaces, Some(99)) else {
+            panic!("a non-native interface index should be rejected");
+        };
+
+        assert_eq!(error.kind, PlatformErrorKind::NotFound);
+        assert!(error.message.contains("if_index=99"));
+    }
 }
