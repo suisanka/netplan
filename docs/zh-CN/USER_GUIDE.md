@@ -263,7 +263,8 @@ IPv4/IPv6 地址分别放在 continuation line，长地址列表不会再撑宽�
 JSON 形式的 `status` 额外返回 `captured_at_unix_ms`、`wifi_interfaces` 和可选
 `wifi_error`。已连接
 的 Wi-Fi interface 包含 SSID 显示文本和精确的 `ssid_hex`、信号质量、profile name、
-authentication/cipher、安全状态以及 RX/TX rate。
+authentication/cipher、安全状态以及 RX/TX rate。软件或硬件无线电关闭时，该接口返回
+`state: "radio_off"`。
 
 `wifi scan` 默认触发新扫描，并等待 4000 ms 获取完成通知。`--timeout-ms` 只能处于
 250–15000 ms；`--cached` 跳过扫描。响应格式：
@@ -277,11 +278,14 @@ authentication/cipher、安全状态以及 RX/TX rate。
 
 `refreshed: false` 表示请求了缓存，或超时前未收到扫描完成通知；它不表示附近没有网络。
 原生扫描失败仍然是 error。不提供 `--if-index` 时，只读 status/scan CLI 会查询所有
-`WlanEnumInterfaces` 返回的已启用 Wi-Fi interface，并合并扫描结果。`--if-index` 只操作
-其中一个精确接口；不在 Native Wi-Fi 清单内的 IP Helper 无线/虚拟 adapter 不会被扫描。
+`WlanEnumInterfaces` 返回且无线电已开启的 Wi-Fi interface，并合并扫描结果。自动模式会
+跳过无线电关闭的接口；只要跳过了接口，`refreshed` 就是 `false`。如果所有接口均关闭，
+或 `--if-index` 显式选择了关闭的接口，命令会返回 typed `unsupported` 并提示开启 Wi-Fi。
+不在 Native Wi-Fi 清单内的 IP Helper 无线/虚拟 adapter 不会被扫描。
 Windows 隐私策略可能拒绝 Wi-Fi discovery API；PE Netplan 会返回 typed
 `permission_denied`，而不是伪装成空列表。OS 层行为见 Microsoft 的
 [WlanEnumInterfaces](https://learn.microsoft.com/windows/win32/api/wlanapi/nf-wlanapi-wlanenuminterfaces)、
+[WLAN_RADIO_STATE](https://learn.microsoft.com/windows/win32/api/wlanapi/ns-wlanapi-wlan_radio_state)、
 [WlanScan](https://learn.microsoft.com/windows/win32/api/wlanapi/nf-wlanapi-wlanscan)
 和 [WlanGetAvailableNetworkList](https://learn.microsoft.com/windows/win32/api/wlanapi/nf-wlanapi-wlangetavailablenetworklist)
 文档。
@@ -630,6 +634,7 @@ Transport status 非零后通过 `netplan_client_last_error` 复制错误消息�
 | `系统找不到指定的文件` / endpoint 不存在 | 启动 `netpland`，确认两端 endpoint 相同；同目录 daemon 存在时也可以移除 `--no-autostart` |
 | 打开 pipe 时 `permission_denied` | 确认已同意 UAC；`netplan rpc` 的宿主需先提权；否则检查 daemon account/pipe ACL |
 | Wi-Fi `permission_denied` | 检查 Windows Wi-Fi/location 隐私策略与 service 状态 |
+| Wi-Fi radio `unsupported` | 开启 Wi-Fi；软件或硬件无线电关闭时，`wifi status` 会显示 `radio_off` |
 | `unsupported` | 运行 `capabilities`；向镜像添加缺失组件/service，或移除该 operation |
 | Wi-Fi `not_found` | 确认无线 adapter 已启用，并出现在 Native Wi-Fi interface 清单中（`netsh wlan show interfaces`） |
 | `refreshed: false` | 在有界范围内增加 timeout 后重试；当前列表可能来自缓存 |

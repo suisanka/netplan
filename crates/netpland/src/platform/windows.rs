@@ -231,9 +231,29 @@ impl Platform for WindowsPlatform {
         })?;
         let client = wifi::Client::open()?;
         let interfaces = client.interfaces()?;
-        let mut refreshed = refresh;
+        let selected = select_wifi_interfaces(&interfaces, if_index)?;
+        let mut scannable = Vec::with_capacity(selected.len());
+        let mut radio_off = Vec::new();
+        for interface in selected {
+            if client.radio_state(&interface.guid)? == wifi::RadioState::Off {
+                radio_off.push(interface.if_index);
+            } else {
+                scannable.push(interface);
+            }
+        }
+        if scannable.is_empty() {
+            let indexes = radio_off
+                .iter()
+                .map(u32::to_string)
+                .collect::<Vec<_>>()
+                .join(", ");
+            return Err(PlatformError::unsupported(format!(
+                "Wi-Fi radio is off for Native Wi-Fi interface if_index={indexes}; turn on Wi-Fi and retry"
+            )));
+        }
+        let mut refreshed = refresh && radio_off.is_empty();
         let mut networks = Vec::new();
-        for interface in select_wifi_interfaces(&interfaces, if_index)? {
+        for interface in scannable {
             let name = inventory
                 .adapters
                 .iter()

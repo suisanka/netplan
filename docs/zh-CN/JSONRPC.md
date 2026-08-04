@@ -90,7 +90,9 @@ Name、GUID、MAC 与 description 匹配都不区分大小写；MAC 的 `:` 与 
 没有匹配返回 `-32004`；多个匹配返回 `-32009`，并附带精简候选 ID。
 
 Wi-Fi status 与 scan 使用 `WlanEnumInterfaces` 返回的已启用接口。省略 `if_index` 时会
-查询/扫描全部接口并合并扫描结果；提供时则只操作该精确 Native Wi-Fi interface。Scan 接受：
+查询全部接口，扫描其中无线电已开启的接口并合并结果；跳过关闭接口时 `refreshed` 为
+`false`。提供 `if_index` 时只操作该精确接口；显式选择关闭接口返回 typed
+`unsupported`，status 则显示 `radio_off`。Scan 接受：
 
 ```json
 {

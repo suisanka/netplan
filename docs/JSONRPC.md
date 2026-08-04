@@ -96,8 +96,11 @@ Names, GUIDs, MAC addresses, and description matching are case-insensitive. MAC 
 `-32009` with compact candidate identifiers.
 
 Wi-Fi status and scanning use the enabled interfaces returned by `WlanEnumInterfaces`.
-Omitting `if_index` queries/scans all of them and merges scan results; supplying it
-restricts the operation to that exact Native Wi-Fi interface. A scan accepts:
+Omitting `if_index` queries all of them, scans the interfaces whose radio is on, and
+merges results. Radio-off interfaces are skipped and make `refreshed` false. Supplying
+`if_index` restricts the operation to that exact Native Wi-Fi interface; selecting a
+radio-off interface returns typed `unsupported`. Wi-Fi status reports `radio_off`. A
+scan accepts:
 
 ```json
 {

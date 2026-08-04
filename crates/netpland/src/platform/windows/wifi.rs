@@ -13,7 +13,9 @@ use std::time::{Duration, Instant};
 
 use netplan::config::{SecretRef, WifiAuthentication, WifiProfile};
 use netplan::{WifiInterfaceStatus, WifiNetwork};
-use windows::Win32::Foundation::{FreeLibrary, HANDLE, HMODULE};
+use windows::Win32::Foundation::{
+    ERROR_NDIS_DOT11_POWER_STATE_INVALID, FreeLibrary, HANDLE, HMODULE,
+};
 use windows::Win32::NetworkManagement::IpHelper::{
     ConvertInterfaceGuidToLuid, ConvertInterfaceLuidToIndex,
 };
@@ -31,13 +33,15 @@ use windows::Win32::NetworkManagement::WiFi::{
     WLAN_AVAILABLE_NETWORK, WLAN_AVAILABLE_NETWORK_CONNECTED, WLAN_AVAILABLE_NETWORK_LIST,
     WLAN_CONNECTION_ATTRIBUTES, WLAN_CONNECTION_PARAMETERS, WLAN_INTERFACE_INFO_LIST,
     WLAN_INTERFACE_STATE, WLAN_INTF_OPCODE, WLAN_NOTIFICATION_SOURCE_ACM,
-    WLAN_NOTIFICATION_SOURCE_NONE, WLAN_NOTIFICATION_SOURCES, dot11_BSS_type_infrastructure,
+    WLAN_NOTIFICATION_SOURCE_NONE, WLAN_NOTIFICATION_SOURCES, WLAN_RADIO_STATE,
+    dot11_BSS_type_infrastructure, dot11_radio_state_off, dot11_radio_state_on,
     wlan_connection_mode_profile, wlan_interface_state_ad_hoc_network_formed,
     wlan_interface_state_associating, wlan_interface_state_authenticating,
     wlan_interface_state_connected, wlan_interface_state_disconnected,
     wlan_interface_state_disconnecting, wlan_interface_state_discovering,
     wlan_interface_state_not_ready, wlan_intf_opcode_current_connection,
-    wlan_notification_acm_scan_complete, wlan_notification_acm_scan_fail,
+    wlan_intf_opcode_radio_state, wlan_notification_acm_scan_complete,
+    wlan_notification_acm_scan_fail,
 };
 use windows::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW};
 use windows::core::{BOOL, GUID, PCSTR, PCWSTR, PWSTR};
@@ -142,6 +146,13 @@ pub(super) struct Interface {
     pub(super) if_index: u32,
     pub(super) description: String,
     pub(super) state: WLAN_INTERFACE_STATE,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum RadioState {
+    On,
+    Off,
+    Unknown,
 }
 
 pub(super) struct Client {
@@ -350,6 +361,9 @@ impl Client {
     }
 
     pub(super) fn scan(&self, interface: &GUID) -> PlatformResult<()> {
+        if self.radio_state(interface)? == RadioState::Off {
+            return wlan_result("WlanScan", ERROR_NDIS_DOT11_POWER_STATE_INVALID.0);
+        }
         // SAFETY: The client/interface are valid. Null optional arguments request a general scan.
         let code = unsafe {
             (self.scan)(
@@ -435,7 +449,12 @@ impl Client {
         name: &str,
         guid: Option<String>,
     ) -> PlatformResult<WifiInterfaceStatus> {
-        let connection = self.current_connection(interface)?;
+        let radio_state = self.radio_state(interface)?;
+        let connection = if radio_state == RadioState::Off {
+            None
+        } else {
+            self.current_connection(interface)?
+        };
         let connected = connection
             .as_ref()
             .filter(|attributes| attributes.isState == wlan_interface_state_connected);
@@ -446,7 +465,7 @@ impl Client {
             if_index,
             name: name.to_owned(),
             guid,
-            state: interface_state_name(state).to_owned(),
+            state: effective_interface_state(state, radio_state).to_owned(),
             profile_name: connected
                 .map(|attributes| fixed_wide(&attributes.strProfileName))
                 .transpose()?
@@ -514,6 +533,46 @@ impl Client {
                 .map(|attributes| fixed_wide(&attributes.strProfileName))
                 .transpose()
         })
+    }
+
+    pub(super) fn radio_state(&self, interface: &GUID) -> PlatformResult<RadioState> {
+        let mut bytes = 0_u32;
+        let mut data = ptr::null_mut::<c_void>();
+        // SAFETY: All output pointers are writable and successful API memory is released below.
+        let code = unsafe {
+            (self.query_interface)(
+                self.handle,
+                interface,
+                wlan_intf_opcode_radio_state,
+                ptr::null(),
+                &raw mut bytes,
+                &raw mut data,
+                ptr::null_mut(),
+            )
+        };
+        wlan_result("WlanQueryInterface(radio_state)", code)?;
+        let result = if data.is_null()
+            || usize::try_from(bytes).unwrap_or_default() < size_of::<WLAN_RADIO_STATE>()
+        {
+            Err(PlatformError::internal(
+                "WlanQueryInterface returned a truncated radio state",
+            ))
+        } else {
+            // SAFETY: The size check above covers the complete fixed-size radio-state record.
+            let state = unsafe { data.cast::<WLAN_RADIO_STATE>().read_unaligned() };
+            if usize::try_from(state.dwNumberOfPhys).unwrap_or(usize::MAX)
+                > state.PhyRadioState.len()
+            {
+                Err(PlatformError::internal(
+                    "Native Wi-Fi returned an invalid radio PHY count",
+                ))
+            } else {
+                Ok(classify_radio_state(&state))
+            }
+        };
+        // SAFETY: `data` is the WLAN allocation returned by WlanQueryInterface and is freed once.
+        unsafe { (self.free_memory)(data) };
+        result
     }
 
     fn current_connection(
@@ -721,6 +780,35 @@ fn interface_state_name(state: WLAN_INTERFACE_STATE) -> &'static str {
         "authenticating"
     } else {
         "unknown"
+    }
+}
+
+fn effective_interface_state(state: WLAN_INTERFACE_STATE, radio_state: RadioState) -> &'static str {
+    if radio_state == RadioState::Off {
+        "radio_off"
+    } else {
+        interface_state_name(state)
+    }
+}
+
+fn classify_radio_state(state: &WLAN_RADIO_STATE) -> RadioState {
+    let count = usize::try_from(state.dwNumberOfPhys).unwrap_or(usize::MAX);
+    if count == 0 || count > state.PhyRadioState.len() {
+        return RadioState::Unknown;
+    }
+    let phys = &state.PhyRadioState[..count];
+    if phys.iter().any(|phy| {
+        phy.dot11SoftwareRadioState == dot11_radio_state_on
+            && phy.dot11HardwareRadioState == dot11_radio_state_on
+    }) {
+        RadioState::On
+    } else if phys.iter().all(|phy| {
+        phy.dot11SoftwareRadioState == dot11_radio_state_off
+            || phy.dot11HardwareRadioState == dot11_radio_state_off
+    }) {
+        RadioState::Off
+    } else {
+        RadioState::Unknown
     }
 }
 
@@ -955,6 +1043,11 @@ fn wlan_result(operation: &str, code: u32) -> PlatformResult<()> {
     if code == 0 {
         return Ok(());
     }
+    if code == ERROR_NDIS_DOT11_POWER_STATE_INVALID.0 {
+        return Err(PlatformError::unsupported(format!(
+            "{operation} is unavailable because the Wi-Fi radio is off; turn on Wi-Fi and retry"
+        )));
+    }
     let kind = match code {
         ERROR_ACCESS_DENIED => PlatformErrorKind::PermissionDenied,
         ERROR_FILE_NOT_FOUND | ERROR_NOT_FOUND => PlatformErrorKind::NotFound,
@@ -999,6 +1092,79 @@ unsafe fn transmute_copy_function<T: Copy>(symbol: unsafe extern "system" fn() -
 #[cfg(test)]
 mod tests {
     use super::*;
+    use windows::Win32::NetworkManagement::WiFi::{
+        WLAN_PHY_RADIO_STATE, WLAN_RADIO_STATE, dot11_radio_state_off, dot11_radio_state_on,
+        dot11_radio_state_unknown,
+    };
+
+    fn radio_state(software: i32, hardware: i32) -> WLAN_RADIO_STATE {
+        let mut state = WLAN_RADIO_STATE {
+            dwNumberOfPhys: 1,
+            ..Default::default()
+        };
+        state.PhyRadioState[0] = WLAN_PHY_RADIO_STATE {
+            dwPhyIndex: 0,
+            dot11SoftwareRadioState: windows::Win32::NetworkManagement::WiFi::DOT11_RADIO_STATE(
+                software,
+            ),
+            dot11HardwareRadioState: windows::Win32::NetworkManagement::WiFi::DOT11_RADIO_STATE(
+                hardware,
+            ),
+        };
+        state
+    }
+
+    #[test]
+    fn radio_state_distinguishes_on_software_off_hardware_off_and_unknown() {
+        assert_eq!(
+            classify_radio_state(&radio_state(dot11_radio_state_on.0, dot11_radio_state_on.0)),
+            RadioState::On
+        );
+        assert_eq!(
+            classify_radio_state(&radio_state(
+                dot11_radio_state_off.0,
+                dot11_radio_state_on.0
+            )),
+            RadioState::Off
+        );
+        assert_eq!(
+            classify_radio_state(&radio_state(
+                dot11_radio_state_on.0,
+                dot11_radio_state_off.0
+            )),
+            RadioState::Off
+        );
+        assert_eq!(
+            classify_radio_state(&radio_state(
+                dot11_radio_state_unknown.0,
+                dot11_radio_state_on.0
+            )),
+            RadioState::Unknown
+        );
+    }
+
+    #[test]
+    fn radio_power_error_is_actionable_and_not_internal() {
+        let Err(error) = wlan_result("WlanScan", ERROR_NDIS_DOT11_POWER_STATE_INVALID.0) else {
+            panic!("a powered-off radio must not be reported as success");
+        };
+
+        assert_eq!(error.kind, PlatformErrorKind::Unsupported);
+        assert!(error.message.contains("Wi-Fi radio is off"));
+        assert!(error.message.contains("turn on Wi-Fi"));
+    }
+
+    #[test]
+    fn powered_off_radio_overrides_disconnected_interface_state() {
+        assert_eq!(
+            effective_interface_state(wlan_interface_state_disconnected, RadioState::Off),
+            "radio_off"
+        );
+        assert_eq!(
+            effective_interface_state(wlan_interface_state_disconnected, RadioState::On),
+            "disconnected"
+        );
+    }
 
     #[test]
     fn profile_xml_escapes_values_and_never_debug_formats_secrets() {

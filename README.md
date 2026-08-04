@@ -87,8 +87,9 @@ seconds for the Native Wi-Fi scan-complete notification and then returns the ava
 network list. Its `refreshed` field is `false` when the cached list was requested or no
 completion notification arrived before the timeout. Use `--if-index` to select one
 exact Native Wi-Fi interface; without it, every enabled interface reported by
-`WlanEnumInterfaces` is scanned and the results are merged. Use `--timeout-ms` to change
-the bounded 250–15000 ms wait.
+`WlanEnumInterfaces` whose radio is on is scanned and the results are merged. Interfaces
+whose radio is off are skipped in automatic mode; explicitly selecting one returns an
+actionable error. Use `--timeout-ms` to change the bounded 250–15000 ms wait.
 
 Interactive mode accepts the same subcommands without repeating `netplan.exe`, supports
 quoted Windows paths, and exits with `exit` or `quit`.

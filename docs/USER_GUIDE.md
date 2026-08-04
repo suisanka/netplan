@@ -279,7 +279,8 @@ structured field:
 
 The JSON form of `status` adds `captured_at_unix_ms`, `wifi_interfaces`, and an optional `wifi_error`.
 Connected Wi-Fi interfaces include SSID display text and exact `ssid_hex`, signal
-quality, profile name, authentication/cipher, security state, and RX/TX rates.
+quality, profile name, authentication/cipher, security state, and RX/TX rates. An
+interface whose software or hardware radio is disabled reports `state: "radio_off"`.
 
 `wifi scan` defaults to a fresh scan and a 4000 ms completion wait. `--timeout-ms` is
 bounded to 250–15000 ms. `--cached` skips the scan. The response contains:
@@ -294,12 +295,16 @@ bounded to 250–15000 ms. `--cached` skips the scan. The response contains:
 `refreshed: false` means cached results were requested or no scan-complete notification
 arrived before the timeout; it does not mean that no networks exist. A native scan
 failure remains an error. With no `--if-index`, the status/scan CLI queries every Wi-Fi
-interface reported by `WlanEnumInterfaces` and merges scan results. `--if-index` targets
-exactly one interface from that list; IP Helper wireless/virtual adapters outside the
-Native Wi-Fi list are not scanned. Windows privacy policy can deny access to Wi-Fi
+interface reported by `WlanEnumInterfaces` whose radio is on and merges scan results.
+Radio-off interfaces are skipped in automatic mode, which sets `refreshed: false` if at
+least one interface was skipped. If every interface is off, or `--if-index` explicitly
+selects an off interface, the command returns typed `unsupported` with instructions to
+turn on Wi-Fi. IP Helper wireless/virtual adapters outside the Native Wi-Fi list are not
+scanned. Windows privacy policy can deny access to Wi-Fi
 discovery APIs; PE Netplan returns a typed `permission_denied` instead of silently
 returning an empty list. See Microsoft's
 [WlanEnumInterfaces](https://learn.microsoft.com/windows/win32/api/wlanapi/nf-wlanapi-wlanenuminterfaces),
+[WLAN_RADIO_STATE](https://learn.microsoft.com/windows/win32/api/wlanapi/ns-wlanapi-wlan_radio_state),
 [WlanScan](https://learn.microsoft.com/windows/win32/api/wlanapi/nf-wlanapi-wlanscan),
 and [WlanGetAvailableNetworkList](https://learn.microsoft.com/windows/win32/api/wlanapi/nf-wlanapi-wlangetavailablenetworklist)
 documentation for OS-level behavior.
@@ -665,6 +670,7 @@ daemon `ErrorResponse`. See [include/netplan.h](../include/netplan.h) and the co
 | `system cannot find the file` / endpoint absent | Start `netpland`, verify both processes use the same endpoint, or remove `--no-autostart` when the sibling executable is present |
 | `permission_denied` opening the pipe | Confirm the UAC prompt was accepted; for `netplan rpc`, launch its host elevated; otherwise review the daemon account/pipe ACL |
 | Wi-Fi `permission_denied` | Review Windows Wi-Fi/location privacy policy and service state |
+| Wi-Fi radio `unsupported` | Turn on Wi-Fi; `wifi status` reports `radio_off` for a disabled software or hardware radio |
 | `unsupported` | Run `capabilities`; add the missing image component/service or omit that operation |
 | Wi-Fi `not_found` | Confirm the adapter is enabled and appears in the Native Wi-Fi interface list (`netsh wlan show interfaces`) |
 | `refreshed: false` | Retry with a longer bounded timeout; the returned list may be cached |

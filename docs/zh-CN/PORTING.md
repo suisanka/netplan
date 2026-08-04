@@ -14,7 +14,7 @@ plan、capability preflight、Windows backend 和 rollback classification。依�
 | DNS/gateway/WINS | 有序原生 inventory，加 `netsh` apply/restore | Build/plan；实机 empty DNS/WINS 和 no-gateway |
 | Adapter state | Enable、disable、restart，并按相反顺序 rollback | 实机 disable/enable |
 | MAC override | Adapter-class registry `NetworkAddress` 加 adapter restart；恢复旧值 | 实机 override 与强制 rollback |
-| Wi-Fi | 动态加载 Native Wi-Fi API；以 `WlanEnumInterfaces` 为接口真值源，支持精确 `if_index` 或全接口聚合扫描，以及 link status、profile/connect/disconnect 与 rollback | GNU target Clippy/build 与 typed selection test；仍需带 WLAN 硬件的实机 scan |
+| Wi-Fi | 动态加载 Native Wi-Fi API；以 `WlanEnumInterfaces` 选择接口，通过 `WLAN_RADIO_STATE` 检测开关，支持精确 `if_index` 或无线电开启接口聚合扫描，以及 link status、profile/connect/disconnect 与 rollback | GNU target Clippy/build 与 typed selection/radio test；仍需带 WLAN 硬件的实机 scan |
 | SMB account | NetAPI：不存在时创建本地用户；已有密码不会改变，因为无法捕获旧密码执行 lossless rollback | 实机 create 与强制 rollback |
 | SMB share | NetAPI level 502 create/update 与 level 1501 ACL restore；支持 Everyone 或命名本地账号 ACL | 实机 create 与强制 rollback |
 | SMB mapping | MPR add/cancel，credential 仅在内存；冲突 drive mapping fail closed | API/capability 已验证；没有远程 SMB fixture |
