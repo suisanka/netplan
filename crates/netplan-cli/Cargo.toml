@@ -16,7 +16,7 @@ doc = false
 
 [dependencies]
 clap.workspace = true
-netplan = { path = "../netplan", version = "0.1.0" }
+netplan = { path = "../netplan", version = "0.1.1" }
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true

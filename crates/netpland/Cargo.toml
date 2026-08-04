@@ -17,7 +17,7 @@ doc = false
 [dependencies]
 clap.workspace = true
 ipnet.workspace = true
-netplan = { path = "../netplan", version = "0.1.0" }
+netplan = { path = "../netplan", version = "0.1.1" }
 tokio.workspace = true
 uuid.workspace = true
 

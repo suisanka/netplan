@@ -816,23 +816,32 @@ mod tests {
     }
 
     async fn wait_for_terminal_job(daemon: &Daemon<MockPlatform>, job_id: &str) -> Response {
-        for _ in 0..100 {
-            let response = daemon
-                .dispatch(Request::JobStatus {
-                    job_id: job_id.to_owned(),
-                })
-                .await;
-            if !matches!(
-                response,
-                Response::JobStatus {
-                    state: JobState::Running | JobState::Queued,
-                    ..
+        let terminal_status = async {
+            loop {
+                let response = daemon
+                    .dispatch(Request::JobStatus {
+                        job_id: job_id.to_owned(),
+                    })
+                    .await;
+                if !matches!(
+                    response,
+                    Response::JobStatus {
+                        state: JobState::Running | JobState::Queued,
+                        ..
+                    }
+                ) {
+                    return response;
                 }
-            ) {
-                return response;
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
             }
-            tokio::task::yield_now().await;
+        };
+        match tokio::time::timeout(std::time::Duration::from_secs(5), terminal_status).await {
+            Ok(response) => response,
+            Err(error) => {
+                panic!(
+                    "background apply did not reach a terminal state within five seconds: {error}"
+                )
+            }
         }
-        panic!("background apply did not reach a terminal state")
     }
 }
