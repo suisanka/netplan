@@ -15,7 +15,7 @@ crate-type = ["cdylib", "staticlib"]
 doc = false
 
 [dependencies]
-netplan = { path = "../netplan", version = "0.1.1" }
+netplan = { path = "../netplan", version = "0.1.2" }
 tokio.workspace = true
 
 [target.'cfg(windows)'.dependencies]
