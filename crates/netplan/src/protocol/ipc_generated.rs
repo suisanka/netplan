@@ -586,10 +586,10 @@ impl ::flatbuffers::SimpleToVerifyInSlice for JobState {}
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
 pub const ENUM_MIN_PAYLOAD: u8 = 0;
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
-pub const ENUM_MAX_PAYLOAD: u8 = 23;
+pub const ENUM_MAX_PAYLOAD: u8 = 25;
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
 #[allow(non_camel_case_types)]
-pub const ENUM_VALUES_PAYLOAD: [Payload; 24] = [
+pub const ENUM_VALUES_PAYLOAD: [Payload; 26] = [
   Payload::NONE,
   Payload::PingRequest,
   Payload::PingResponse,
@@ -614,6 +614,8 @@ pub const ENUM_VALUES_PAYLOAD: [Payload; 24] = [
   Payload::WifiStatusResponse,
   Payload::WifiScanRequest,
   Payload::WifiScanResponse,
+  Payload::ShutdownRequest,
+  Payload::ShutdownResponse,
 ];
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -645,9 +647,11 @@ impl Payload {
   pub const WifiStatusResponse: Self = Self(21);
   pub const WifiScanRequest: Self = Self(22);
   pub const WifiScanResponse: Self = Self(23);
+  pub const ShutdownRequest: Self = Self(24);
+  pub const ShutdownResponse: Self = Self(25);
 
   pub const ENUM_MIN: u8 = 0;
-  pub const ENUM_MAX: u8 = 23;
+  pub const ENUM_MAX: u8 = 25;
   pub const ENUM_VALUES: &'static [Self] = &[
     Self::NONE,
     Self::PingRequest,
@@ -673,6 +677,8 @@ impl Payload {
     Self::WifiStatusResponse,
     Self::WifiScanRequest,
     Self::WifiScanResponse,
+    Self::ShutdownRequest,
+    Self::ShutdownResponse,
   ];
   /// Returns the variant's name or "" if unknown.
   pub fn variant_name(self) -> Option<&'static str> {
@@ -701,6 +707,8 @@ impl Payload {
       Self::WifiStatusResponse => Some("WifiStatusResponse"),
       Self::WifiScanRequest => Some("WifiScanRequest"),
       Self::WifiScanResponse => Some("WifiScanResponse"),
+      Self::ShutdownRequest => Some("ShutdownRequest"),
+      Self::ShutdownResponse => Some("ShutdownResponse"),
       _ => None,
     }
   }
@@ -785,6 +793,8 @@ pub enum PayloadT {
   WifiStatusResponse(alloc::boxed::Box<WifiStatusResponseT>),
   WifiScanRequest(alloc::boxed::Box<WifiScanRequestT>),
   WifiScanResponse(alloc::boxed::Box<WifiScanResponseT>),
+  ShutdownRequest(alloc::boxed::Box<ShutdownRequestT>),
+  ShutdownResponse(alloc::boxed::Box<ShutdownResponseT>),
 }
 impl Default for PayloadT {
   fn default() -> Self {
@@ -818,6 +828,8 @@ impl PayloadT {
       Self::WifiStatusResponse(_) => Payload::WifiStatusResponse,
       Self::WifiScanRequest(_) => Payload::WifiScanRequest,
       Self::WifiScanResponse(_) => Payload::WifiScanResponse,
+      Self::ShutdownRequest(_) => Payload::ShutdownRequest,
+      Self::ShutdownResponse(_) => Payload::ShutdownResponse,
     }
   }
   pub fn pack<'b, A: ::flatbuffers::Allocator + 'b>(&self, fbb: &mut ::flatbuffers::FlatBufferBuilder<'b, A>) -> Option<::flatbuffers::WIPOffset<::flatbuffers::UnionWIPOffset>> {
@@ -846,6 +858,8 @@ impl PayloadT {
       Self::WifiStatusResponse(v) => Some(v.pack(fbb).as_union_value()),
       Self::WifiScanRequest(v) => Some(v.pack(fbb).as_union_value()),
       Self::WifiScanResponse(v) => Some(v.pack(fbb).as_union_value()),
+      Self::ShutdownRequest(v) => Some(v.pack(fbb).as_union_value()),
+      Self::ShutdownResponse(v) => Some(v.pack(fbb).as_union_value()),
     }
   }
   /// If the union variant matches, return the owned PingRequestT, setting the union to NONE.
@@ -1330,6 +1344,48 @@ impl PayloadT {
   /// If the union variant matches, return a mutable reference to the WifiScanResponseT.
   pub fn as_wifi_scan_response_mut(&mut self) -> Option<&mut WifiScanResponseT> {
     if let Self::WifiScanResponse(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned ShutdownRequestT, setting the union to NONE.
+  pub fn take_shutdown_request(&mut self) -> Option<alloc::boxed::Box<ShutdownRequestT>> {
+    if let Self::ShutdownRequest(_) = self {
+      let v = ::core::mem::replace(self, Self::NONE);
+      if let Self::ShutdownRequest(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the ShutdownRequestT.
+  pub fn as_shutdown_request(&self) -> Option<&ShutdownRequestT> {
+    if let Self::ShutdownRequest(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the ShutdownRequestT.
+  pub fn as_shutdown_request_mut(&mut self) -> Option<&mut ShutdownRequestT> {
+    if let Self::ShutdownRequest(v) = self { Some(v.as_mut()) } else { None }
+  }
+  /// If the union variant matches, return the owned ShutdownResponseT, setting the union to NONE.
+  pub fn take_shutdown_response(&mut self) -> Option<alloc::boxed::Box<ShutdownResponseT>> {
+    if let Self::ShutdownResponse(_) = self {
+      let v = ::core::mem::replace(self, Self::NONE);
+      if let Self::ShutdownResponse(w) = v {
+        Some(w)
+      } else {
+        unreachable!()
+      }
+    } else {
+      None
+    }
+  }
+  /// If the union variant matches, return a reference to the ShutdownResponseT.
+  pub fn as_shutdown_response(&self) -> Option<&ShutdownResponseT> {
+    if let Self::ShutdownResponse(v) = self { Some(v.as_ref()) } else { None }
+  }
+  /// If the union variant matches, return a mutable reference to the ShutdownResponseT.
+  pub fn as_shutdown_response_mut(&mut self) -> Option<&mut ShutdownResponseT> {
+    if let Self::ShutdownResponse(v) = self { Some(v.as_mut()) } else { None }
   }
 }
 pub enum PingRequestOffset {}
@@ -7169,6 +7225,216 @@ impl WifiScanResponseT {
     })
   }
 }
+pub enum ShutdownRequestOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct ShutdownRequest<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for ShutdownRequest<'a> {
+  type Inner = ShutdownRequest<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> ShutdownRequest<'a> {
+
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "PENetplan.Ipc.ShutdownRequest"
+  }
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    ShutdownRequest { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    _args: &'args ShutdownRequestArgs
+  ) -> ::flatbuffers::WIPOffset<ShutdownRequest<'bldr>> {
+    let mut builder = ShutdownRequestBuilder::new(_fbb);
+    builder.finish()
+  }
+
+  pub fn unpack(&self) -> ShutdownRequestT {
+    ShutdownRequestT {
+    }
+  }
+}
+
+impl ::flatbuffers::Verifiable for ShutdownRequest<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct ShutdownRequestArgs {
+}
+impl<'a> Default for ShutdownRequestArgs {
+  #[inline]
+  fn default() -> Self {
+    ShutdownRequestArgs {
+    }
+  }
+}
+
+pub struct ShutdownRequestBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> ShutdownRequestBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> ShutdownRequestBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    ShutdownRequestBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<ShutdownRequest<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for ShutdownRequest<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("ShutdownRequest");
+      ds.finish()
+  }
+}
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct ShutdownRequestT {
+}
+impl Default for ShutdownRequestT {
+  fn default() -> Self {
+    Self {
+    }
+  }
+}
+impl ShutdownRequestT {
+  pub fn pack<'b, A: ::flatbuffers::Allocator + 'b>(
+    &self,
+    _fbb: &mut ::flatbuffers::FlatBufferBuilder<'b, A>
+  ) -> ::flatbuffers::WIPOffset<ShutdownRequest<'b>> {
+    ShutdownRequest::create(_fbb, &ShutdownRequestArgs{
+    })
+  }
+}
+pub enum ShutdownResponseOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct ShutdownResponse<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for ShutdownResponse<'a> {
+  type Inner = ShutdownResponse<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> ShutdownResponse<'a> {
+
+  pub const fn get_fully_qualified_name() -> &'static str {
+    "PENetplan.Ipc.ShutdownResponse"
+  }
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    ShutdownResponse { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    _args: &'args ShutdownResponseArgs
+  ) -> ::flatbuffers::WIPOffset<ShutdownResponse<'bldr>> {
+    let mut builder = ShutdownResponseBuilder::new(_fbb);
+    builder.finish()
+  }
+
+  pub fn unpack(&self) -> ShutdownResponseT {
+    ShutdownResponseT {
+    }
+  }
+}
+
+impl ::flatbuffers::Verifiable for ShutdownResponse<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct ShutdownResponseArgs {
+}
+impl<'a> Default for ShutdownResponseArgs {
+  #[inline]
+  fn default() -> Self {
+    ShutdownResponseArgs {
+    }
+  }
+}
+
+pub struct ShutdownResponseBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> ShutdownResponseBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> ShutdownResponseBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    ShutdownResponseBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<ShutdownResponse<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for ShutdownResponse<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("ShutdownResponse");
+      ds.finish()
+  }
+}
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq)]
+pub struct ShutdownResponseT {
+}
+impl Default for ShutdownResponseT {
+  fn default() -> Self {
+    Self {
+    }
+  }
+}
+impl ShutdownResponseT {
+  pub fn pack<'b, A: ::flatbuffers::Allocator + 'b>(
+    &self,
+    _fbb: &mut ::flatbuffers::FlatBufferBuilder<'b, A>
+  ) -> ::flatbuffers::WIPOffset<ShutdownResponse<'b>> {
+    ShutdownResponse::create(_fbb, &ShutdownResponseArgs{
+    })
+  }
+}
 pub enum ErrorResponseOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -7488,6 +7754,16 @@ impl<'a> Envelope<'a> {
       Payload::WifiScanResponse => PayloadT::WifiScanResponse(alloc::boxed::Box::new(
         self.payload_as_wifi_scan_response()
             .expect("Invalid union table, expected `Payload::WifiScanResponse`.")
+            .unpack()
+      )),
+      Payload::ShutdownRequest => PayloadT::ShutdownRequest(alloc::boxed::Box::new(
+        self.payload_as_shutdown_request()
+            .expect("Invalid union table, expected `Payload::ShutdownRequest`.")
+            .unpack()
+      )),
+      Payload::ShutdownResponse => PayloadT::ShutdownResponse(alloc::boxed::Box::new(
+        self.payload_as_shutdown_response()
+            .expect("Invalid union table, expected `Payload::ShutdownResponse`.")
             .unpack()
       )),
       _ => PayloadT::NONE,
@@ -7872,6 +8148,36 @@ impl<'a> Envelope<'a> {
     }
   }
 
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn payload_as_shutdown_request(&self) -> Option<ShutdownRequest<'a>> {
+    if self.payload_type() == Payload::ShutdownRequest {
+      self.payload().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { ShutdownRequest::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn payload_as_shutdown_response(&self) -> Option<ShutdownResponse<'a>> {
+    if self.payload_type() == Payload::ShutdownResponse {
+      self.payload().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { ShutdownResponse::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
 }
 
 impl ::flatbuffers::Verifiable for Envelope<'_> {
@@ -7907,6 +8213,8 @@ impl ::flatbuffers::Verifiable for Envelope<'_> {
           Payload::WifiStatusResponse => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<WifiStatusResponse>>("Payload::WifiStatusResponse", pos),
           Payload::WifiScanRequest => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<WifiScanRequest>>("Payload::WifiScanRequest", pos),
           Payload::WifiScanResponse => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<WifiScanResponse>>("Payload::WifiScanResponse", pos),
+          Payload::ShutdownRequest => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<ShutdownRequest>>("Payload::ShutdownRequest", pos),
+          Payload::ShutdownResponse => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<ShutdownResponse>>("Payload::ShutdownResponse", pos),
           _ => Ok(()),
         }
      })?
@@ -8131,6 +8439,20 @@ impl ::core::fmt::Debug for Envelope<'_> {
         },
         Payload::WifiScanResponse => {
           if let Some(x) = self.payload_as_wifi_scan_response() {
+            ds.field("payload", &x)
+          } else {
+            ds.field("payload", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        Payload::ShutdownRequest => {
+          if let Some(x) = self.payload_as_shutdown_request() {
+            ds.field("payload", &x)
+          } else {
+            ds.field("payload", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        Payload::ShutdownResponse => {
+          if let Some(x) = self.payload_as_shutdown_response() {
             ds.field("payload", &x)
           } else {
             ds.field("payload", &"InvalidFlatbuffer: Union discriminant does not match value.")

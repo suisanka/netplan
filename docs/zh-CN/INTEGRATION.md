@@ -32,6 +32,10 @@ Apply response 可能是 `running`。保留 `job_id`，并使用
 `NetworkStatus` 也会保留 adapter state。Wi-Fi scan response 包含 `refreshed` 和排序后的
 network list；`false` 表示读取缓存结果时没有观察到 scan-complete 通知。
 
+`Request::Shutdown` 会先返回 `Response::ShutdownAccepted`，然后 daemon 才关闭 listener。
+它用于本机生命周期管理，只应通过与内置 named pipe 相同、限制为 Administrator/SYSTEM
+的 transport 暴露。
+
 Windows 默认 endpoint 是 `\\.\pipe\pe-netplan-netpland-v1`。测试和 Unix 开发环境使用
 `/tmp/pe-netplan-netpland-v1.sock`。`NETPLAN_ENDPOINT` 可以覆盖 client 的默认值。
 

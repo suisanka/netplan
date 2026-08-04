@@ -883,6 +883,7 @@ pub(crate) fn response_value(response: Response) -> Result<Value, String> {
             message,
         } => Ok(json!({"job_id": job_id, "state": state, "message": message})),
         Response::Jobs { jobs, total } => Ok(json!({"jobs": jobs, "total": total})),
+        Response::ShutdownAccepted => Ok(json!({"stopping": true})),
         Response::Error { code, message } => Err(format!("{}: {message}", error_code_name(code))),
     }
 }

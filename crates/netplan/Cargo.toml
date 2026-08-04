@@ -19,5 +19,8 @@ serde-saphyr.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 
+[target.'cfg(windows)'.dependencies]
+windows.workspace = true
+
 [lints]
 workspace = true

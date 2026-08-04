@@ -50,6 +50,10 @@ DLL 选择 mimalloc。
 可以显式启动 daemon，也可以在本机 endpoint 不存在时让 CLI 启动同目录下的 daemon：
 
 ```console
+netplan.exe enable
+netplan.exe start
+netplan.exe stop
+netplan.exe disable
 netpland.exe
 netplan.exe ping
 netplan.exe capabilities
@@ -67,6 +71,13 @@ netplan.exe job <job-id>
 netplan.exe interactive
 ```
 
+执行 `enable` 会把 `netpland.exe` 安装为自动启动的 `PE Netplan Daemon` Windows
+service，并立即启动。在普通 Windows 终端运行时，`netplan.exe` 会先请求 UAC 提权，再在
+同一个控制台中执行命令。安装后 `start`/`stop` 管理该 service；未安装时则启动/停止同目录
+下的后台 daemon。`disable` 会停止并卸载 service，但不会删除二进制。Service 安装只使用
+默认 endpoint，并记录当前 `netpland.exe` 的绝对路径，因此请保持 release 目录位置不变；
+移动后重新执行一次 `enable`。
+
 `status` 返回包含适配器地址与当前 Wi-Fi 连接状态的本机快照，并不检测互联网连通性。
 `wifi scan` 最多等待四秒以接收 Native Wi-Fi 扫描完成通知，然后读取可用网络列表。
 请求缓存列表或等待超时时，`refreshed` 为 `false`。使用 `--if-index` 选择单个无线接口，
@@ -75,9 +86,10 @@ netplan.exe interactive
 交互模式直接接受相同的子命令，不需要重复输入 `netplan.exe`；它支持带引号的 Windows
 路径，并通过 `exit` 或 `quit` 退出。
 
-单次命令默认输出简洁、对齐的人类可读摘要/表格。在子命令前后添加全局 `--json` 可获得
-完整且稳定的 JSON 结构；JSON 模式的错误也会以结构化 JSON 写入 stderr，同时保持非零
-exit code。
+单次命令默认输出简洁的人类可读摘要。网络对象采用自动换行的多行记录，不再把多个 IPv6
+地址和 description 塞入一个无限扩展的表格行；每行最多 88 列。在子命令前后添加全局
+`--json` 可获得完整且稳定的 JSON 结构；JSON 模式的错误也会以结构化 JSON 写入 stderr，
+同时保持非零 exit code。
 
 未提供 `--live` 时，`apply` 始终是 dry-run。Live job 通常先返回 `running`，之后使用
 `job` 查询。通过 `protect.management_interfaces` 声明绝不能变更的接口；daemon 会在
@@ -98,6 +110,9 @@ exit code。
 {"jsonrpc":"2.0","id":5,"method":"netplan.wifi.scan","params":{"timeout_ms":4000}}
 ```
 
+Windows 上启动 `netplan rpc` 的宿主进程必须已经提权。Gateway 不会在这里自动触发 UAC，
+因为重新启动会破坏外部程序重定向的 JSON-RPC stdin/stdout handle。
+
 网关还提供单 capability/adapter 查询、有界 job 等待、配置检查、schema 示例和方法发现。
 [schemas/jsonrpc.json](schemas/jsonrpc.json) 是机器可读的权威契约，显式定义全部 method、
 parameter schema、result schema、共享结构类型与错误；详见
@@ -112,7 +127,7 @@ frame。详见[中文集成指南](docs/zh-CN/INTEGRATION.md)。
 
 - 只有 `netpland` 拥有特权状态变更能力。
 - Windows named pipe 拒绝远程客户端，只允许 `SYSTEM` 和 Administrators 成员访问；
-  daemon 应以管理员权限运行。
+  单次 CLI 命令和直接启动 daemon 都会自动请求 UAC，取消 UAC 时会给出明确错误。
 - Frame 最大 16 MiB，并在分发前完成验证。
 - 配置拒绝未知字段和无效 selector。
 - Hook 保存 executable 和参数数组，而不是 shell 文本。

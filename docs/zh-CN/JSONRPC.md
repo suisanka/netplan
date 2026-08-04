@@ -4,6 +4,8 @@
 
 `netplan rpc` 在 stdin/stdout 上提供换行分隔的 JSON-RPC 2.0。CLI 把每个请求转换为 typed
 daemon protocol；`netpland` 本身不接受 JSON。
+Windows 上应由已经提权的宿主启动 gateway。它不会自动触发 UAC 重启，因为跨进程提权
+边界无法可靠保留重定向的 stdin/stdout handle。
 
 省略 `id` 表示 notification。响应保留 string、number 或 null ID。无参数方法可以省略
 `params`，也可以传 `{}` 或 `[]`。
@@ -31,6 +33,10 @@ daemon protocol；`netpland` 本身不接受 JSON。
 | `netplan.job.list` | 可选 job filter | 最新保留 job 与 limit 前总数 |
 | `netplan.job.wait` | wait 参数 | terminal job 状态或有界 timeout |
 | `netplan.rpc.discover` | 无 | 完整 method/type contract 与运行时版本 |
+
+`netplan enable`、`disable`、`start` 与 `stop` 管理本机 daemon process/service，刻意不作为
+JSON-RPC method 暴露。生命周期变更请直接使用 CLI；内部 FlatBuffers shutdown frame
+仍受 daemon pipe ACL 约束。
 
 ## 机器可读契约
 

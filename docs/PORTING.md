@@ -24,6 +24,7 @@ verification note rather than pretending unavailable test hardware was exercised
 | Services | SCM query/start/stop with terminal-state wait and rollback | SMB services no-op live |
 | Driver install | PnPUtil normal install/restart; runtime-loaded NewDev force update; reboot-required handling | Capability/build only; no signed disposable driver fixture |
 | Hooks | Direct executable plus argument array at before/after/after-rollback stages; no implicit shell | Success/failure and rollback live |
+| Daemon lifecycle | SCM auto-start LocalSystem service with typed shutdown, background fallback, and shell-free UAC relaunch for CLI/daemon entry points | GNU target Clippy/build and Windows 11 background lifecycle smoke; service/UAC live switch skipped |
 
 ## Platform and protocol boundary
 

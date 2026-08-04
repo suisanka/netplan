@@ -9,6 +9,9 @@ use netplan::{
 };
 
 use crate::jsonrpc;
+use crate::service::LifecycleResult;
+
+const HUMAN_OUTPUT_WIDTH: usize = 88;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum OutputFormat {
@@ -73,6 +76,32 @@ pub(crate) fn render(response: Response, format: OutputFormat) -> Result<String,
                     .map_err(|error| CliError::from(error.to_string()))
             }
         },
+    }
+}
+
+pub(crate) fn render_lifecycle(
+    result: &LifecycleResult,
+    format: OutputFormat,
+) -> Result<String, CliError> {
+    match format {
+        OutputFormat::Human => Ok(key_values(
+            "PE Netplan daemon",
+            &[
+                ("Action", result.action.into()),
+                ("Mode", lifecycle_mode_name(result.mode).into()),
+                ("Installed", yes_no(result.installed).into()),
+                ("State", result.state.into()),
+                ("Details", result.message.clone()),
+            ],
+        )),
+        OutputFormat::Json => serde_json::to_string_pretty(&serde_json::json!({
+            "action": result.action,
+            "mode": result.mode,
+            "installed": result.installed,
+            "state": result.state,
+            "message": result.message
+        }))
+        .map_err(|error| CliError::from(error.to_string())),
     }
 }
 
@@ -159,6 +188,7 @@ fn render_human(response: Response) -> Result<String, CliError> {
             refreshed,
             networks,
         } => Ok(render_wifi_networks(refreshed, &networks)),
+        Response::ShutdownAccepted => Ok("PE Netplan daemon is stopping".into()),
         Response::Validation { valid, issues } => Ok(render_validation(valid, &issues)),
         Response::Plan(operations) => Ok(render_operations("Plan", &operations)),
         Response::Apply {
@@ -186,32 +216,31 @@ fn render_human(response: Response) -> Result<String, CliError> {
             ],
         )),
         Response::Jobs { jobs, total } => {
-            let rows = jobs
+            let displayed = jobs.len();
+            let records = jobs
                 .into_iter()
                 .map(|job| {
-                    vec![
-                        job.job_id,
-                        job_state_name(job.state).into(),
-                        job.created_at_unix_ms.to_string(),
-                        job.updated_at_unix_ms.to_string(),
-                        option_text(job.message.as_deref()),
-                    ]
+                    record(
+                        &job.job_id,
+                        &[
+                            ("State", job_state_name(job.state).into()),
+                            ("Created (ms)", job.created_at_unix_ms.to_string()),
+                            ("Updated (ms)", job.updated_at_unix_ms.to_string()),
+                            ("Message", option_text(job.message.as_deref())),
+                        ],
+                    )
                 })
-                .collect::<Vec<_>>();
+                .collect();
             Ok(format!(
                 "{}\n\n{}",
                 key_values(
                     "Jobs",
                     &[
                         ("Matching", total.to_string()),
-                        ("Displayed", rows.len().to_string()),
+                        ("Displayed", displayed.to_string()),
                     ],
                 ),
-                table(
-                    &["JOB ID", "STATE", "CREATED MS", "UPDATED MS", "MESSAGE"],
-                    &rows,
-                    "No jobs matched the query.",
-                )
+                record_list("Job details", records, "No jobs matched the query.")
             ))
         }
         Response::Error { code, message } => Err(CliError::daemon(code, message)),
@@ -219,103 +248,107 @@ fn render_human(response: Response) -> Result<String, CliError> {
 }
 
 fn render_capabilities(capabilities: &[Capability]) -> String {
-    let rows = capabilities
+    if capabilities.is_empty() {
+        return "Capabilities (0)\n  No capabilities reported.".into();
+    }
+    let name_width = capabilities
         .iter()
-        .map(|capability| {
-            vec![
-                capability.name.clone(),
-                capability_state_name(capability.state).into(),
-                option_text(capability.reason.as_deref()),
-            ]
-        })
-        .collect::<Vec<_>>();
-    format!(
-        "Capabilities ({})\n{}",
-        capabilities.len(),
-        table(
-            &["CAPABILITY", "STATE", "DETAILS"],
-            &rows,
-            "  No capabilities reported.",
-        )
-    )
+        .map(|capability| capability.name.chars().count())
+        .max()
+        .unwrap_or(0)
+        .min(36);
+    let mut output = format!("Capabilities ({})", capabilities.len());
+    for capability in capabilities {
+        let name = clean_cell(&capability.name);
+        let _ = write!(
+            output,
+            "\n  {name:<name_width$}  {}",
+            capability_state_name(capability.state)
+        );
+        if let Some(reason) = capability
+            .reason
+            .as_deref()
+            .filter(|reason| !reason.is_empty())
+        {
+            push_wrapped_lines(&mut output, reason, "\n    ", "\n    ", 4);
+        }
+    }
+    output
 }
 
 fn render_adapters(adapters: &[AdapterInfo]) -> String {
-    let rows = adapters
+    let records = adapters
         .iter()
         .map(|adapter| {
-            vec![
-                adapter.if_index.to_string(),
-                adapter.name.clone(),
-                adapter.status.clone(),
-                if adapter.hardware {
-                    "physical"
-                } else {
-                    "virtual"
-                }
-                .into(),
-                option_text(adapter.mac_address.as_deref()),
-                format_addresses(adapter),
-                option_text(adapter.description.as_deref()),
-            ]
+            record(
+                &format!("[{}] {}", adapter.if_index, adapter.name),
+                &[
+                    ("Status", adapter.status.clone()),
+                    (
+                        "Kind",
+                        if adapter.hardware {
+                            "physical"
+                        } else {
+                            "virtual"
+                        }
+                        .into(),
+                    ),
+                    ("MAC", option_text(adapter.mac_address.as_deref())),
+                    ("IPv4", format_addresses(&adapter.ipv4)),
+                    ("IPv6", format_addresses(&adapter.ipv6)),
+                    ("Description", option_text(adapter.description.as_deref())),
+                ],
+            )
         })
-        .collect::<Vec<_>>();
-    format!(
-        "Adapters ({})\n{}",
-        adapters.len(),
-        table(
-            &[
-                "INDEX",
-                "NAME",
-                "STATUS",
-                "KIND",
-                "MAC",
-                "ADDRESSES",
-                "DESCRIPTION"
-            ],
-            &rows,
-            "  No adapters reported.",
-        )
+        .collect();
+    record_list(
+        &format!("Adapters ({})", adapters.len()),
+        records,
+        "No adapters reported.",
     )
 }
 
 fn render_wifi_interfaces(interfaces: &[WifiInterfaceStatus]) -> String {
-    let rows = interfaces
+    let records = interfaces
         .iter()
         .map(|interface| {
-            vec![
-                interface.if_index.to_string(),
-                interface.name.clone(),
-                interface.state.clone(),
-                option_text(interface.ssid.as_deref()),
-                interface
-                    .signal_quality
-                    .map_or_else(|| "-".into(), |signal| format!("{signal}%")),
-                wifi_security(
-                    interface.security_enabled,
-                    interface.authentication.as_deref(),
-                    interface.cipher.as_deref(),
-                ),
-                option_text(interface.profile_name.as_deref()),
-                wifi_rates(interface.rx_rate_kbps, interface.tx_rate_kbps),
-            ]
+            record(
+                &format!("[{}] {}", interface.if_index, interface.name),
+                &[
+                    ("State", interface.state.clone()),
+                    ("SSID", option_text(interface.ssid.as_deref())),
+                    (
+                        "Signal",
+                        interface
+                            .signal_quality
+                            .map_or_else(|| "-".into(), |signal| format!("{signal}%")),
+                    ),
+                    (
+                        "Security",
+                        wifi_security(
+                            interface.security_enabled,
+                            interface.authentication.as_deref(),
+                            interface.cipher.as_deref(),
+                        ),
+                    ),
+                    ("Profile", option_text(interface.profile_name.as_deref())),
+                    (
+                        "RX/TX",
+                        wifi_rates(interface.rx_rate_kbps, interface.tx_rate_kbps),
+                    ),
+                ],
+            )
         })
-        .collect::<Vec<_>>();
-    format!(
-        "Wi-Fi interfaces ({})\n{}",
-        interfaces.len(),
-        table(
-            &[
-                "INDEX", "NAME", "STATE", "SSID", "SIGNAL", "SECURITY", "PROFILE", "RX/TX"
-            ],
-            &rows,
-            "  No Wi-Fi interfaces reported.",
-        )
+        .collect();
+    record_list(
+        &format!("Wi-Fi interfaces ({})", interfaces.len()),
+        records,
+        "No Wi-Fi interfaces reported.",
     )
 }
 
 fn render_wifi_networks(refreshed: bool, networks: &[WifiNetwork]) -> String {
-    let rows = networks
+    let records = networks
         .iter()
         .map(|network| {
             let mut flags = Vec::new();
@@ -328,28 +361,43 @@ fn render_wifi_networks(refreshed: bool, networks: &[WifiNetwork]) -> String {
             if !network.connectable {
                 flags.push("blocked");
             }
-            vec![
-                network.ssid.clone(),
-                format!("{}%", network.signal_quality),
-                if network.security_enabled {
-                    format!("{}/{}", network.authentication, network.cipher)
+            record(
+                if network.ssid.is_empty() {
+                    "<hidden network>"
                 } else {
-                    "open".into()
+                    &network.ssid
                 },
-                format!(
-                    "{} [{}]",
-                    network.interface_name, network.interface_if_index
-                ),
-                if flags.is_empty() {
-                    "-".into()
-                } else {
-                    flags.join(",")
-                },
-            ]
+                &[
+                    ("Signal", format!("{}%", network.signal_quality)),
+                    (
+                        "Security",
+                        if network.security_enabled {
+                            format!("{}/{}", network.authentication, network.cipher)
+                        } else {
+                            "open".into()
+                        },
+                    ),
+                    (
+                        "Interface",
+                        format!(
+                            "{} [{}]",
+                            network.interface_name, network.interface_if_index
+                        ),
+                    ),
+                    (
+                        "Flags",
+                        if flags.is_empty() {
+                            "-".into()
+                        } else {
+                            flags.join(", ")
+                        },
+                    ),
+                ],
+            )
         })
-        .collect::<Vec<_>>();
+        .collect();
     format!(
-        "{}\n{}",
+        "{}\n\n{}",
         key_values(
             "Wi-Fi networks",
             &[
@@ -357,11 +405,7 @@ fn render_wifi_networks(refreshed: bool, networks: &[WifiNetwork]) -> String {
                 ("Networks", networks.len().to_string()),
             ],
         ),
-        table(
-            &["SSID", "SIGNAL", "SECURITY", "INTERFACE", "FLAGS"],
-            &rows,
-            "  No Wi-Fi networks reported.",
-        )
+        record_list("Network details", records, "No Wi-Fi networks reported.")
     )
 }
 
@@ -372,12 +416,17 @@ fn render_validation(valid: bool, issues: &[ValidationIssue]) -> String {
             &[("Status", "valid".into()), ("Issues", "0".into())],
         );
     }
-    let rows = issues
+    let records = issues
         .iter()
-        .map(|issue| vec![option_text(issue.path.as_deref()), issue.message.clone()])
-        .collect::<Vec<_>>();
+        .map(|issue| {
+            record(
+                issue.path.as_deref().unwrap_or("<document>"),
+                &[("Message", issue.message.clone())],
+            )
+        })
+        .collect();
     format!(
-        "{}\n{}",
+        "{}\n\n{}",
         key_values(
             "Configuration validation",
             &[
@@ -385,32 +434,29 @@ fn render_validation(valid: bool, issues: &[ValidationIssue]) -> String {
                 ("Issues", issues.len().to_string()),
             ],
         ),
-        table(&["PATH", "MESSAGE"], &rows, "  No diagnostics reported."),
+        record_list("Diagnostics", records, "No diagnostics reported."),
     )
 }
 
 fn render_operations(title: &str, operations: &[Operation]) -> String {
-    let rows = operations
+    let records = operations
         .iter()
         .enumerate()
         .map(|(index, operation)| {
-            vec![
-                (index + 1).to_string(),
-                operation_risk_name(operation.risk).into(),
-                operation.capability.clone(),
-                option_text(operation.target.as_deref()),
-                operation.summary.clone(),
-            ]
+            record(
+                &format!("{}. {}", index + 1, operation.summary),
+                &[
+                    ("Risk", operation_risk_name(operation.risk).into()),
+                    ("Capability", operation.capability.clone()),
+                    ("Target", option_text(operation.target.as_deref())),
+                ],
+            )
         })
-        .collect::<Vec<_>>();
-    format!(
-        "{title} ({})\n{}",
-        operations.len(),
-        table(
-            &["#", "RISK", "CAPABILITY", "TARGET", "OPERATION"],
-            &rows,
-            "  No operations required.",
-        )
+        .collect();
+    record_list(
+        &format!("{title} ({})", operations.len()),
+        records,
+        "No operations required.",
     )
 }
 
@@ -422,64 +468,97 @@ fn key_values(title: &str, values: &[(&str, String)]) -> String {
         .unwrap_or(0);
     let mut output = String::from(title);
     for (key, value) in values {
-        let _ = write!(
-            output,
-            "\n  {key:<width$}  {}",
-            clean_cell(value),
-            width = width
+        let first_prefix = format!("\n  {key:<width$}  ");
+        let continuation = format!("\n  {:width$}  ", "");
+        push_wrapped_lines(
+            &mut output,
+            value,
+            &first_prefix,
+            &continuation,
+            first_prefix.chars().count().saturating_sub(1),
         );
     }
     output
 }
 
-fn table(headers: &[&str], rows: &[Vec<String>], empty: &str) -> String {
-    if rows.is_empty() {
-        return empty.into();
+fn record(title: &str, values: &[(&str, String)]) -> String {
+    let title = wrap_text(&clean_cell(title), HUMAN_OUTPUT_WIDTH.saturating_sub(2)).join("\n");
+    key_values(&title, values)
+}
+
+fn record_list(title: &str, records: Vec<String>, empty: &str) -> String {
+    if records.is_empty() {
+        return format!("{title}\n  {empty}");
     }
-    let mut widths = headers
-        .iter()
-        .map(|header| header.chars().count())
-        .collect::<Vec<_>>();
-    for row in rows {
-        for (index, value) in row.iter().take(widths.len()).enumerate() {
-            widths[index] = widths[index].max(clean_cell(value).chars().count());
+    let mut output = String::from(title);
+    for record in records {
+        output.push_str("\n\n");
+        for (index, line) in record.lines().enumerate() {
+            if index > 0 {
+                output.push('\n');
+            }
+            output.push_str("  ");
+            output.push_str(line);
         }
-    }
-    let mut output = String::new();
-    push_table_row(
-        &mut output,
-        &headers.iter().map(ToString::to_string).collect::<Vec<_>>(),
-        &widths,
-    );
-    output.push('\n');
-    push_table_row(
-        &mut output,
-        &widths
-            .iter()
-            .map(|width| "-".repeat(*width))
-            .collect::<Vec<_>>(),
-        &widths,
-    );
-    for row in rows {
-        output.push('\n');
-        push_table_row(&mut output, row, &widths);
     }
     output
 }
 
-fn push_table_row(output: &mut String, cells: &[String], widths: &[usize]) {
-    for (index, width) in widths.iter().enumerate() {
-        if index > 0 {
-            output.push_str("  ");
-        }
-        let cell = cells.get(index).map_or("", String::as_str);
-        let cell = clean_cell(cell);
-        if index + 1 == widths.len() {
-            output.push_str(&cell);
+fn push_wrapped_lines(
+    output: &mut String,
+    value: &str,
+    first_prefix: &str,
+    continuation_prefix: &str,
+    prefix_width: usize,
+) {
+    let line_width = HUMAN_OUTPUT_WIDTH.saturating_sub(prefix_width).max(20);
+    let lines = wrap_text(value, line_width);
+    for (index, line) in lines.iter().enumerate() {
+        output.push_str(if index == 0 {
+            first_prefix
         } else {
-            let _ = write!(output, "{cell:<width$}");
+            continuation_prefix
+        });
+        output.push_str(line);
+    }
+}
+
+fn wrap_text(value: &str, width: usize) -> Vec<String> {
+    let value = value.replace('\r', "");
+    let mut output = Vec::new();
+    for source_line in value.split('\n') {
+        let mut line = String::new();
+        for word in source_line.split_whitespace() {
+            let separator = usize::from(!line.is_empty());
+            if line.chars().count() + separator + word.chars().count() <= width {
+                if separator == 1 {
+                    line.push(' ');
+                }
+                line.push_str(word);
+                continue;
+            }
+            if !line.is_empty() {
+                output.push(std::mem::take(&mut line));
+            }
+            let mut chunk = String::new();
+            for character in word.chars() {
+                if chunk.chars().count() == width {
+                    output.push(std::mem::take(&mut chunk));
+                }
+                chunk.push(character);
+            }
+            line = chunk;
+        }
+        if !line.is_empty() {
+            output.push(line);
+        } else if source_line.is_empty() {
+            output.push(String::new());
         }
     }
+    if output.is_empty() {
+        output.push("-".into());
+    }
+    output
 }
 
 fn clean_cell(value: &str) -> String {
@@ -493,17 +572,15 @@ fn option_text(value: Option<&str>) -> String {
         .into()
 }
 
-fn format_addresses(adapter: &AdapterInfo) -> String {
-    let addresses = adapter
-        .ipv4
+fn format_addresses(addresses: &[netplan::IpAddressInfo]) -> String {
+    let addresses = addresses
         .iter()
-        .chain(&adapter.ipv6)
         .map(|address| format!("{}/{}", address.address, address.prefix_length))
         .collect::<Vec<_>>();
     if addresses.is_empty() {
         "-".into()
     } else {
-        addresses.join(", ")
+        addresses.join("\n")
     }
 }
 
@@ -561,6 +638,14 @@ fn format_duration(milliseconds: u64) -> String {
 
 const fn yes_no(value: bool) -> &'static str {
     if value { "yes" } else { "no" }
+}
+
+fn lifecycle_mode_name(mode: &str) -> &str {
+    match mode {
+        "windows-service" => "Windows service",
+        "background-process" => "Background process",
+        _ => mode,
+    }
 }
 
 const fn capability_state_name(state: CapabilityState) -> &'static str {
@@ -683,7 +768,7 @@ mod tests {
     }
 
     #[test]
-    fn adapter_table_includes_identity_and_addresses() {
+    fn adapter_cards_include_identity_and_addresses() {
         let rendered = render_human(Response::Adapters(vec![AdapterInfo {
             if_index: 7,
             name: "Ethernet".into(),
@@ -709,7 +794,69 @@ mod tests {
     }
 
     #[test]
-    fn empty_tables_have_an_explicit_message() {
+    fn adapter_cards_keep_multiple_ipv6_addresses_inside_the_human_width() {
+        let rendered = render_human(Response::Adapters(vec![AdapterInfo {
+            if_index: 6,
+            name: "Ethernet 2".into(),
+            description: Some("Realtek Gaming 2.5GbE Family Controller".into()),
+            guid: None,
+            mac_address: Some("1C-86-0B-36-8B-31".into()),
+            status: "up".into(),
+            hardware: true,
+            ipv4: vec![IpAddressInfo {
+                address: "192.168.1.7".into(),
+                prefix_length: 24,
+            }],
+            ipv6: vec![
+                IpAddressInfo {
+                    address: "2408:821b:2520:6890:70b:3eb5:3152:542e".into(),
+                    prefix_length: 64,
+                },
+                IpAddressInfo {
+                    address: "2408:821b:2520:6890:90f3:f16a:bc15:92f".into(),
+                    prefix_length: 128,
+                },
+                IpAddressInfo {
+                    address: "fe80::fdef:20b2:2635:2594".into(),
+                    prefix_length: 64,
+                },
+            ],
+        }]));
+        let output = rendered.unwrap_or_default();
+        assert!(output.contains("\n    IPv4"));
+        assert!(output.contains("\n    IPv6"));
+        assert!(
+            output
+                .lines()
+                .all(|line| line.chars().count() <= HUMAN_OUTPUT_WIDTH),
+            "human output exceeded {HUMAN_OUTPUT_WIDTH} columns:\n{output}"
+        );
+    }
+
+    #[test]
+    fn lifecycle_output_is_readable_and_json_remains_structured() {
+        let result = LifecycleResult {
+            action: "enable",
+            mode: "windows-service",
+            installed: true,
+            state: "running",
+            message: "installed for automatic startup and started".into(),
+        };
+        let human = render_lifecycle(&result, OutputFormat::Human);
+        assert!(
+            matches!(human, Ok(output) if output.contains("Windows service") && output.contains("running"))
+        );
+
+        let json = render_lifecycle(&result, OutputFormat::Json)
+            .ok()
+            .and_then(|output| serde_json::from_str::<serde_json::Value>(&output).ok());
+        assert!(
+            matches!(json, Some(value) if value["action"] == "enable" && value["installed"] == true)
+        );
+    }
+
+    #[test]
+    fn empty_sections_have_an_explicit_message() {
         assert_eq!(
             render_human(Response::Capabilities(Vec::new())),
             Ok("Capabilities (0)\n  No capabilities reported.".into())

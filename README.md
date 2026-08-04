@@ -52,6 +52,10 @@ Start the daemon explicitly, or allow the CLI to start its sibling executable wh
 local endpoint is absent:
 
 ```console
+netplan.exe enable
+netplan.exe start
+netplan.exe stop
+netplan.exe disable
 netpland.exe
 netplan.exe ping
 netplan.exe capabilities
@@ -69,6 +73,14 @@ netplan.exe job <job-id>
 netplan.exe interactive
 ```
 
+Run `enable` to install `netpland.exe` as the automatic `PE Netplan Daemon` Windows
+service and start it immediately. From a normal Windows terminal, `netplan.exe` requests
+UAC elevation before running the command in the same console. `start` and `stop` manage
+the service; when it is not installed, they start/stop a sibling background daemon.
+`disable` stops and uninstalls the service without deleting the binaries. Service
+installation uses the default endpoint and stores the current absolute path to
+`netpland.exe`, so keep the release directory in place or rerun `enable` after moving it.
+
 `status` returns one local snapshot containing adapter addresses and current Wi-Fi
 connection state; it is not an Internet reachability test. `wifi scan` waits up to four
 seconds for the Native Wi-Fi scan-complete notification and then returns the available
@@ -79,7 +91,9 @@ wireless interface and `--timeout-ms` to change the bounded 250–15000 ms wait.
 Interactive mode accepts the same subcommands without repeating `netplan.exe`, supports
 quoted Windows paths, and exits with `exit` or `quit`.
 
-One-shot commands use concise, aligned human-readable output by default. Add the global
+One-shot commands use concise human-readable output by default. Network objects are
+rendered as wrapped multi-line records instead of one unbounded table row, keeping each
+line within 88 columns even when an adapter has several IPv6 addresses. Add the global
 `--json` option before or after a subcommand to obtain the complete stable JSON shape;
 JSON mode also emits structured errors on stderr while retaining a nonzero exit code.
 
@@ -104,6 +118,10 @@ JSON object per line:
 {"jsonrpc":"2.0","id":5,"method":"netplan.wifi.scan","params":{"timeout_ms":4000}}
 ```
 
+On Windows, the host that launches `netplan rpc` must already be elevated. The gateway
+does not perform a UAC relaunch because that would break redirected JSON-RPC standard
+input/output handles.
+
 The gateway also provides single-capability/adapter lookup, bounded job waiting,
 configuration inspection, schema examples, and method discovery. The canonical
 machine-readable contract in [schemas/jsonrpc.json](schemas/jsonrpc.json) defines all
@@ -119,7 +137,8 @@ accepts and returns size-prefixed `PNET` FlatBuffers frames described by
 
 - Only `netpland` owns privileged state changes.
 - The Windows named pipe rejects remote clients and grants access only to `SYSTEM` and
-  members of Administrators. Run the daemon elevated.
+  members of Administrators. One-shot CLI commands and direct daemon startup request UAC
+  elevation automatically; UAC cancellation is reported explicitly.
 - Frames are bounded to 16 MiB and verified before dispatch.
 - Configuration rejects unknown fields and invalid selectors.
 - Hook configuration stores an executable and argument array, never shell text.

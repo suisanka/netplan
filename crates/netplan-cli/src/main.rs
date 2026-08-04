@@ -5,6 +5,7 @@
 mod interactive;
 mod jsonrpc;
 mod output;
+mod service;
 
 #[cfg(windows)]
 #[global_allocator]
@@ -49,18 +50,29 @@ struct Args {
     /// Daemon named pipe or Unix-domain socket.
     #[arg(long, global = true, default_value_t = default_endpoint())]
     endpoint: String,
-    /// Do not start a sibling `netpland` when the endpoint is absent.
+    /// Do not start an installed service or sibling daemon when the endpoint is absent.
     #[arg(long, global = true)]
     no_autostart: bool,
     /// Print the complete machine-readable response as JSON.
     #[arg(long, global = true)]
     json: bool,
+    /// Marks a child process that has already requested Windows elevation.
+    #[arg(long = "netplan-elevated-child", global = true, hide = true)]
+    elevated_child: bool,
     #[command(subcommand)]
     command: Commands,
 }
 
 #[derive(Debug, Subcommand)]
 enum Commands {
+    /// Install the daemon as an auto-start Windows service and start it.
+    Enable,
+    /// Stop and uninstall the Windows service.
+    Disable,
+    /// Start the installed service or a background daemon.
+    Start,
+    /// Stop the installed service or background daemon.
+    Stop,
     /// Probe daemon health and protocol compatibility.
     Ping,
     /// Print platform capability states.
@@ -110,6 +122,9 @@ enum Commands {
     Rpc,
     /// Start an interactive command prompt.
     Interactive,
+    /// Start the preferred daemon host without producing lifecycle output.
+    #[command(name = "__autostart", hide = true)]
+    InternalAutostart,
 }
 
 #[derive(Debug, Subcommand)]
@@ -138,6 +153,15 @@ enum WifiCommands {
 async fn main() -> ExitCode {
     let args = Args::parse();
     let output_format = OutputFormat::from_json(args.json);
+    #[cfg(windows)]
+    match elevate_cli_if_needed(&args) {
+        Ok(Some(exit_code)) => return exit_code,
+        Ok(None) => {}
+        Err(error) => {
+            eprintln!("{}", output::render_error(&error.into(), output_format));
+            return ExitCode::FAILURE;
+        }
+    }
     match run(args, output_format).await {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
@@ -150,9 +174,20 @@ async fn main() -> ExitCode {
 async fn run(args: Args, output_format: OutputFormat) -> Result<(), CliError> {
     let client = Client::new(args.endpoint.clone());
     match args.command {
-        Commands::Rpc => jsonrpc::serve(client, args.no_autostart)
-            .await
-            .map_err(CliError::from),
+        Commands::Rpc => {
+            #[cfg(windows)]
+            if !netplan::windows_elevation::is_elevated()
+                .map_err(|error| format!("failed to inspect Windows elevation state: {error}"))?
+            {
+                return Err(
+                    "netplan rpc must be launched by an elevated host; UAC relaunch cannot preserve redirected JSON-RPC stdin/stdout"
+                        .into(),
+                );
+            }
+            jsonrpc::serve(client, args.no_autostart)
+                .await
+                .map_err(CliError::from)
+        }
         Commands::Interactive => interactive::serve(client, args.no_autostart, output_format)
             .await
             .map_err(CliError::from),
@@ -167,6 +202,30 @@ async fn run_command(
     output_format: OutputFormat,
 ) -> Result<(), CliError> {
     let request = match command {
+        Commands::Enable => {
+            let result = service::execute(service::LifecycleAction::Enable, client).await?;
+            println!("{}", output::render_lifecycle(&result, output_format)?);
+            return Ok(());
+        }
+        Commands::Disable => {
+            let result = service::execute(service::LifecycleAction::Disable, client).await?;
+            println!("{}", output::render_lifecycle(&result, output_format)?);
+            return Ok(());
+        }
+        Commands::Start => {
+            let result = service::execute(service::LifecycleAction::Start, client).await?;
+            println!("{}", output::render_lifecycle(&result, output_format)?);
+            return Ok(());
+        }
+        Commands::Stop => {
+            let result = service::execute(service::LifecycleAction::Stop, client).await?;
+            println!("{}", output::render_lifecycle(&result, output_format)?);
+            return Ok(());
+        }
+        Commands::InternalAutostart => {
+            spawn_daemon_elevated(client.endpoint())?;
+            return Ok(());
+        }
         Commands::Ping => Request::Ping,
         Commands::Capabilities => Request::Capabilities,
         Commands::Adapters => Request::ListAdapters,
@@ -250,7 +309,7 @@ pub(crate) async fn call_with_autostart(
     ))
 }
 
-fn is_endpoint_absent(error: &Error) -> bool {
+pub(crate) fn is_endpoint_absent(error: &Error) -> bool {
     matches!(
         error,
         Error::Io(io_error)
@@ -263,7 +322,36 @@ fn is_endpoint_absent(error: &Error) -> bool {
     )
 }
 
-fn spawn_daemon(endpoint: &str) -> Result<(), String> {
+pub(crate) fn spawn_daemon(endpoint: &str) -> Result<(), String> {
+    #[cfg(windows)]
+    if !netplan::windows_elevation::is_elevated()
+        .map_err(|error| format!("failed to inspect Windows elevation state: {error}"))?
+    {
+        let current = std::env::current_exe().map_err(|error| error.to_string())?;
+        let arguments = [
+            "--netplan-elevated-child".into(),
+            "--endpoint".into(),
+            endpoint.into(),
+            "__autostart".into(),
+        ];
+        let exit_code =
+            netplan::windows_elevation::run_as_administrator(&current, &arguments, true)
+                .map_err(|error| format!("failed to elevate daemon startup: {error}"))?;
+        return match exit_code {
+            Some(0) => Ok(()),
+            Some(code) => Err(format!(
+                "elevated daemon startup failed with exit code {code}"
+            )),
+            None => Err("elevated daemon startup returned no exit code".into()),
+        };
+    }
+    spawn_daemon_elevated(endpoint)
+}
+
+fn spawn_daemon_elevated(endpoint: &str) -> Result<(), String> {
+    if service::start_installed_service(endpoint)? {
+        return Ok(());
+    }
     let current = std::env::current_exe().map_err(|error| error.to_string())?;
     let sibling_name = if cfg!(windows) {
         "netpland.exe"
@@ -288,6 +376,27 @@ fn spawn_daemon(endpoint: &str) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(windows)]
+fn elevate_cli_if_needed(args: &Args) -> Result<Option<ExitCode>, String> {
+    if args.elevated_child
+        || matches!(args.command, Commands::Rpc | Commands::InternalAutostart)
+        || netplan::windows_elevation::is_elevated()
+            .map_err(|error| format!("failed to inspect Windows elevation state: {error}"))?
+    {
+        return Ok(None);
+    }
+
+    let current = std::env::current_exe().map_err(|error| error.to_string())?;
+    let mut arguments = vec!["--netplan-elevated-child".into()];
+    arguments.extend(std::env::args_os().skip(1));
+    let exit_code = netplan::windows_elevation::run_as_administrator(&current, &arguments, true)
+        .map_err(|error| format!("failed to elevate netplan: {error}"))?;
+    Ok(Some(match exit_code {
+        Some(0) => ExitCode::SUCCESS,
+        Some(_) | None => ExitCode::FAILURE,
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -308,5 +417,32 @@ mod tests {
                 })
             ));
         }
+    }
+
+    #[test]
+    fn lifecycle_commands_are_explicit_top_level_commands() {
+        for (name, expected) in [
+            ("enable", Commands::Enable),
+            ("disable", Commands::Disable),
+            ("start", Commands::Start),
+            ("stop", Commands::Stop),
+        ] {
+            let parsed = Args::try_parse_from(["netplan", name]);
+            assert!(
+                matches!(parsed, Ok(args) if std::mem::discriminant(&args.command) == std::mem::discriminant(&expected))
+            );
+        }
+    }
+
+    #[test]
+    fn internal_autostart_is_hidden_but_parseable() {
+        let parsed = Args::try_parse_from(["netplan", "__autostart"]);
+        assert!(matches!(
+            parsed,
+            Ok(Args {
+                command: Commands::InternalAutostart,
+                ..
+            })
+        ));
     }
 }

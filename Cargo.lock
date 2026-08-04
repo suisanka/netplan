@@ -331,7 +331,7 @@ dependencies = [
 
 [[package]]
 name = "netplan"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "flatbuffers",
  "ipnet",
@@ -340,11 +340,12 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
+ "windows",
 ]
 
 [[package]]
 name = "netplan-cli"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "clap",
  "mimalloc",
@@ -353,11 +354,12 @@ dependencies = [
  "serde_json",
  "tokio",
  "vc-ltl",
+ "windows",
 ]
 
 [[package]]
 name = "netplan-ffi"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "mimalloc",
  "netplan",
@@ -367,7 +369,7 @@ dependencies = [
 
 [[package]]
 name = "netpland"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "clap",
  "ipnet",

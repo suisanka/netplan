@@ -35,7 +35,7 @@ services, and hardware present in the current Windows or PE image.
 - A GNU Windows linker for `x86_64-pc-windows-gnu`, or Visual Studio 2022 Build Tools
   for `x86_64-pc-windows-msvc`.
 - `cargo-audit` only when running the optional security gate.
-- Administrator rights to run live Windows operations.
+- Administrator credentials or UAC consent to access the protected Windows daemon.
 
 The MSVC target pins VC-LTL5 `5.3.1`. Tagged releases run target-level Clippy, tests,
 and release builds on Windows Server 2022 before publishing either target.
@@ -94,7 +94,31 @@ The default Windows endpoint is:
 \\.\pipe\pe-netplan-netpland-v1
 ```
 
-Start the daemon from an elevated terminal:
+For a persistent installation, keep `netplan.exe` and `netpland.exe` together in their
+final directory and run:
+
+```console
+netplan.exe enable
+```
+
+`enable` installs `netpland.exe` as the LocalSystem `PE Netplan Daemon` Windows service,
+sets automatic startup, and starts it. The lifecycle is idempotent and can then be
+managed with:
+
+```console
+netplan.exe start
+netplan.exe stop
+netplan.exe disable
+```
+
+`stop` leaves automatic startup enabled; a later daemon command may start the installed
+service again unless `--no-autostart` is present. `disable` stops and uninstalls the
+service but does not remove files. SCM stores the absolute daemon path, so rerun
+`enable` after moving the release directory. Service installation and removal require
+the default endpoint. From a normal terminal, the CLI requests UAC elevation and waits
+for the elevated child in the same console.
+
+For a temporary foreground process, start the daemon directly:
 
 ```console
 netpland.exe
@@ -107,10 +131,17 @@ netplan.exe ping
 ```
 
 The Windows named pipe is local-only, rejects remote pipe clients, and grants access to
-`SYSTEM` and Administrators. The CLI does not elevate itself. When the endpoint is
-absent, the CLI normally tries to start a sibling `netpland.exe`; this succeeds only if
-the caller already has the required rights and the daemon executable is beside the CLI
-or available on `PATH`. Use `--no-autostart` when a service manager owns the daemon.
+`SYSTEM` and Administrators. One-shot and interactive CLI commands request UAC elevation
+before accessing it. Direct `netpland.exe` startup also detects a non-elevated token and
+relaunches itself with the UAC `runas` verb instead of failing while creating the pipe.
+Cancelling the prompt returns an explicit permission diagnostic. When the endpoint is
+absent, the elevated CLI normally starts the installed Windows service, or a sibling
+`netpland.exe` when no service is installed. `--no-autostart` prevents both daemon-start
+paths but does not weaken the pipe ACL.
+
+`netplan rpc` is the exception: its host must launch it already elevated. Automatic UAC
+relaunch is intentionally rejected because redirected JSON-RPC stdin/stdout handles
+cannot be preserved reliably across the elevation boundary.
 
 Both processes accept an explicit endpoint:
 
@@ -155,9 +186,11 @@ memory and disappear when `netpland` restarts.
 
 ## 5. CLI reference
 
-One-shot commands print aligned human-readable summaries and tables by default. Add
-`--json` for the complete machine-readable response. Errors are written to stderr and
-return a nonzero exit code; with `--json`, stderr contains a JSON error object.
+One-shot commands print wrapped human-readable summaries by default. Adapter and Wi-Fi
+objects use multi-line records with one address per line; human output is capped at 88
+columns instead of expanding horizontally. Add `--json` for the complete
+machine-readable response. Errors are written to stderr and return a nonzero exit code;
+with `--json`, stderr contains a JSON error object.
 
 ### 5.1 Global options
 
@@ -192,6 +225,10 @@ Typed daemon rejections use their stable code, such as `permission_denied`, inst
 
 | Command | Behavior |
 | --- | --- |
+| `enable` | Install the default-endpoint daemon as an automatic Windows service and start it; requests UAC when needed |
+| `disable` | Stop and uninstall the Windows service; requests UAC when needed |
+| `start` | Start the installed default-endpoint service, or a sibling background daemon when uninstalled |
+| `stop` | Stop the installed service, or gracefully stop a background daemon through typed IPC |
 | `ping` | Return daemon and protocol versions |
 | `capabilities` | Return every capability with `available`, `read_only`, `dry_run`, or `unavailable` state and an optional reason |
 | `adapters` | Return native adapter inventory |
@@ -207,6 +244,10 @@ Typed daemon rejections use their stable code, such as `permission_denied`, inst
 
 `status` is a local state snapshot, not an Internet reachability test. A Wi-Fi status
 failure is returned in `wifi_error` without discarding adapter data.
+
+The four lifecycle commands also accept `--json`. Their successful result contains
+`action`, `mode` (`windows-service` or `background-process`), `installed`, `state`, and
+`message`. They are local CLI operations rather than JSON-RPC methods.
 
 ### 5.3 Interactive mode
 
@@ -227,8 +268,10 @@ for every command, or append `--json` to one command inside the prompt.
 
 ## 6. Network and Wi-Fi status
 
-The default `adapters` table summarizes identity, status, hardware kind, MAC, addresses,
-and description. Use `adapters --json` for every structured field:
+The default `adapters` records summarize identity, status, hardware kind, MAC,
+addresses, and description. IPv4 and IPv6 addresses are placed on separate continuation
+lines so long address lists do not resize the terminal. Use `adapters --json` for every
+structured field:
 
 - `if_index`, friendly `name`, optional description/GUID/MAC;
 - operational `status` and whether the interface is physical hardware;
@@ -616,7 +659,7 @@ daemon `ErrorResponse`. See [include/netplan.h](../include/netplan.h) and the co
 | Symptom | Checks |
 | --- | --- |
 | `system cannot find the file` / endpoint absent | Start `netpland`, verify both processes use the same endpoint, or remove `--no-autostart` when the sibling executable is present |
-| `permission_denied` opening the pipe | Run the client as an Administrator or review the daemon account/pipe ACL |
+| `permission_denied` opening the pipe | Confirm the UAC prompt was accepted; for `netplan rpc`, launch its host elevated; otherwise review the daemon account/pipe ACL |
 | Wi-Fi `permission_denied` | Review Windows Wi-Fi/location privacy policy and service state |
 | `unsupported` | Run `capabilities`; add the missing image component/service or omit that operation |
 | Wi-Fi `not_found` | Confirm a wireless adapter and driver exist and are visible to IP Helper/Native Wi-Fi |
@@ -626,7 +669,7 @@ daemon `ErrorResponse`. See [include/netplan.h](../include/netplan.h) and the co
 | Apply stays `running` | Query `job <id>` or JSON-RPC `netplan.job.wait`; inspect services/hardware operations that have native timeouts |
 | Job ID disappears | `netpland` restarted; jobs are intentionally memory-only |
 | JSON-RPC parse error | Send exactly one UTF-8 JSON object per line; do not send a JSON array or multi-line object |
-| CLI autostart fails | Put `netpland.exe` beside `netplan.exe`, ensure it is executable/elevated, or start it explicitly |
+| CLI autostart fails | Put `netpland.exe` beside `netplan.exe`, accept the UAC prompt, or start/install it explicitly |
 
 When reporting a defect, include the PE Netplan version, Windows/PE build, target triple,
 `ping`, `capabilities`, the failing command, and a redacted configuration/response. Never

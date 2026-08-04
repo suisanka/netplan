@@ -4,6 +4,9 @@ English | [简体中文](zh-CN/JSONRPC.md)
 
 `netplan rpc` serves JSON-RPC 2.0 as newline-delimited JSON over stdin/stdout. The CLI
 translates each request into the typed daemon protocol; `netpland` does not accept JSON.
+On Windows, launch the gateway from an already elevated host. It deliberately does not
+perform an automatic UAC relaunch because redirected stdin/stdout handles cannot be
+preserved reliably across that process boundary.
 
 Requests may omit `id` to send a notification. Responses preserve string, number, or
 null identifiers. Empty parameters may be omitted, `{}`, or `[]` for parameterless
@@ -32,6 +35,10 @@ methods.
 | `netplan.job.list` | optional job filter | newest retained jobs and pre-limit total |
 | `netplan.job.wait` | wait parameters | terminal job state or bounded timeout |
 | `netplan.rpc.discover` | none | complete method/type contract plus runtime versions |
+
+`netplan enable`, `disable`, `start`, and `stop` manage the local daemon process/service
+and are intentionally not JSON-RPC methods. Use the CLI directly for lifecycle changes;
+the private FlatBuffers shutdown frame is restricted by the daemon pipe ACL.
 
 ## Machine-readable contract
 

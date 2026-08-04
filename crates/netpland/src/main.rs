@@ -3,6 +3,8 @@
 #![deny(clippy::expect_used, clippy::unwrap_used)]
 
 mod platform;
+#[cfg(windows)]
+mod windows_service;
 
 #[cfg(windows)]
 #[global_allocator]
@@ -20,7 +22,7 @@ use netplan::protocol::{
 };
 use netplan::{NetplanConfig, build_plan};
 use platform::{Platform, PlatformErrorKind};
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, watch};
 use uuid::Uuid;
 
 #[derive(Debug, Parser)]
@@ -29,6 +31,12 @@ struct Args {
     /// Named pipe on Windows or Unix-domain socket during development.
     #[arg(long, default_value_t = default_endpoint())]
     endpoint: String,
+    /// Run under the Windows Service Control Manager.
+    #[arg(long, hide = true)]
+    service: bool,
+    /// Marks a child process that has already requested Windows elevation.
+    #[arg(long = "netpland-elevated-child", hide = true)]
+    elevated_child: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -44,22 +52,73 @@ struct Daemon<P> {
     jobs: Arc<RwLock<HashMap<String, JobRecord>>>,
     started_at_unix_ms: u64,
     started_at: Instant,
+    shutdown: watch::Sender<bool>,
 }
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     let args = Args::parse();
-    let daemon = Arc::new(Daemon::new(Arc::new(platform::current())));
-    serve(args.endpoint, daemon).await
+    if args.service {
+        #[cfg(windows)]
+        return windows_service::run_dispatcher();
+
+        #[cfg(not(windows))]
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "Windows service mode is unavailable on this platform",
+        ));
+    }
+    #[cfg(windows)]
+    if !args.elevated_child
+        && !netplan::windows_elevation::is_elevated().map_err(|error| {
+            std::io::Error::other(format!(
+                "failed to inspect Windows elevation state: {error}"
+            ))
+        })?
+    {
+        relaunch_elevated(&args.endpoint)?;
+        return Ok(());
+    }
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
+    run_daemon(args.endpoint, shutdown_tx, shutdown_rx).await
+}
+
+#[cfg(windows)]
+fn relaunch_elevated(endpoint: &str) -> std::io::Result<()> {
+    let current = std::env::current_exe()?;
+    let arguments = [
+        "--netpland-elevated-child".into(),
+        "--endpoint".into(),
+        endpoint.into(),
+    ];
+    netplan::windows_elevation::run_as_administrator(&current, &arguments, false).map_err(
+        |error| {
+            std::io::Error::new(
+                error.kind(),
+                format!("netpland needs administrator permission to start: {error}"),
+            )
+        },
+    )?;
+    Ok(())
+}
+
+async fn run_daemon(
+    endpoint: String,
+    shutdown_tx: watch::Sender<bool>,
+    shutdown_rx: watch::Receiver<bool>,
+) -> std::io::Result<()> {
+    let daemon = Arc::new(Daemon::new(Arc::new(platform::current()), shutdown_tx));
+    serve(endpoint, daemon, shutdown_rx).await
 }
 
 impl<P: Platform> Daemon<P> {
-    fn new(platform: Arc<P>) -> Self {
+    fn new(platform: Arc<P>, shutdown: watch::Sender<bool>) -> Self {
         Self {
             platform,
             jobs: Arc::new(RwLock::new(HashMap::new())),
             started_at_unix_ms: now_unix_ms(),
             started_at: Instant::now(),
+            shutdown,
         }
     }
 
@@ -185,7 +244,12 @@ impl<P: Platform> Daemon<P> {
                     }
                 }
             }
+            Request::Shutdown => Response::ShutdownAccepted,
         }
+    }
+
+    fn request_shutdown(&self) {
+        let _ = self.shutdown.send(true);
     }
 
     async fn wifi_scan(&self, if_index: Option<u32>, refresh: bool, timeout_ms: u32) -> Response {
@@ -349,13 +413,22 @@ where
 {
     let request_bytes = read_frame(&mut stream).await?;
     let request = decode_request(&request_bytes)?;
+    let shutdown_requested = matches!(request.payload, Request::Shutdown);
     let response = daemon.dispatch(request.payload).await;
     let response_bytes = encode_response(request.request_id, &response);
-    write_frame(&mut stream, &response_bytes).await
+    write_frame(&mut stream, &response_bytes).await?;
+    if shutdown_requested {
+        daemon.request_shutdown();
+    }
+    Ok(())
 }
 
 #[cfg(unix)]
-async fn serve<P: Platform>(endpoint: String, daemon: Arc<Daemon<P>>) -> std::io::Result<()> {
+async fn serve<P: Platform>(
+    endpoint: String,
+    daemon: Arc<Daemon<P>>,
+    mut shutdown: watch::Receiver<bool>,
+) -> std::io::Result<()> {
     use std::os::unix::fs::FileTypeExt;
     use std::path::Path;
 
@@ -373,7 +446,10 @@ async fn serve<P: Platform>(endpoint: String, daemon: Arc<Daemon<P>>) -> std::io
     }
     let listener = UnixListener::bind(path)?;
     loop {
-        let (stream, _) = listener.accept().await?;
+        let (stream, _) = tokio::select! {
+            accepted = listener.accept() => accepted?,
+            _ = shutdown.changed() => return Ok(()),
+        };
         let daemon = Arc::clone(&daemon);
         tokio::spawn(async move {
             if let Err(error) = handle_connection(stream, daemon).await {
@@ -447,7 +523,11 @@ impl Drop for PipeSecurity {
 }
 
 #[cfg(windows)]
-async fn serve<P: Platform>(endpoint: String, daemon: Arc<Daemon<P>>) -> std::io::Result<()> {
+async fn serve<P: Platform>(
+    endpoint: String,
+    daemon: Arc<Daemon<P>>,
+    mut shutdown: watch::Receiver<bool>,
+) -> std::io::Result<()> {
     use tokio::net::windows::named_pipe::ServerOptions;
 
     let mut first = true;
@@ -462,7 +542,10 @@ async fn serve<P: Platform>(endpoint: String, daemon: Arc<Daemon<P>>) -> std::io
         let server =
             unsafe { options.create_with_security_attributes_raw(&endpoint, security.as_raw())? };
         first = false;
-        server.connect().await?;
+        tokio::select! {
+            connected = server.connect() => connected?,
+            _ = shutdown.changed() => return Ok(()),
+        }
         let daemon = Arc::clone(&daemon);
         tokio::spawn(async move {
             if let Err(error) = handle_connection(server, daemon).await {
@@ -473,7 +556,11 @@ async fn serve<P: Platform>(endpoint: String, daemon: Arc<Daemon<P>>) -> std::io
 }
 
 #[cfg(not(any(unix, windows)))]
-async fn serve<P: Platform>(_endpoint: String, _daemon: Arc<Daemon<P>>) -> std::io::Result<()> {
+async fn serve<P: Platform>(
+    _endpoint: String,
+    _daemon: Arc<Daemon<P>>,
+    _shutdown: watch::Receiver<bool>,
+) -> std::io::Result<()> {
     Err(std::io::Error::new(
         std::io::ErrorKind::Unsupported,
         "local IPC is unsupported on this platform",
@@ -601,8 +688,9 @@ mod tests {
         }
     }
 
-    fn daemon(platform: Arc<MockPlatform>) -> Daemon<MockPlatform> {
-        Daemon::new(platform)
+    fn daemon<P: Platform>(platform: Arc<P>) -> Daemon<P> {
+        let (shutdown, _) = watch::channel(false);
+        Daemon::new(platform, shutdown)
     }
 
     #[tokio::test]
@@ -768,7 +856,7 @@ mod tests {
 
     #[tokio::test]
     async fn network_status_combines_adapter_and_wifi_state() {
-        let daemon = Daemon::new(Arc::new(StatusPlatform));
+        let daemon = daemon(Arc::new(StatusPlatform));
         let response = daemon.dispatch(Request::NetworkStatus).await;
         assert!(matches!(
             response,
@@ -783,7 +871,7 @@ mod tests {
 
     #[tokio::test]
     async fn wifi_scan_returns_networks_and_validates_timeout() {
-        let daemon = Daemon::new(Arc::new(StatusPlatform));
+        let daemon = daemon(Arc::new(StatusPlatform));
         let response = daemon
             .dispatch(Request::WifiScan {
                 if_index: Some(7),

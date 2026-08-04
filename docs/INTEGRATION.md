@@ -35,6 +35,10 @@ state even if the optional Native Wi-Fi component is unavailable. A Wi-Fi scan r
 contains `refreshed` plus a sorted network list; `false` means cached results were read
 without observing a scan-complete notification.
 
+`Request::Shutdown` returns `Response::ShutdownAccepted` before the daemon closes its
+listener. It exists for local lifecycle management and should only be exposed through a
+transport with the same administrator/SYSTEM access controls as the bundled named pipe.
+
 The default endpoint is `\\.\pipe\pe-netplan-netpland-v1` on Windows. Tests and Unix
 development use `/tmp/pe-netplan-netpland-v1.sock`. `NETPLAN_ENDPOINT` overrides the
 default for either client.

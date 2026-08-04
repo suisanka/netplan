@@ -232,6 +232,10 @@ table WifiScanResponse {
   networks:[WifiNetwork] (required);
 }
 
+table ShutdownRequest {}
+
+table ShutdownResponse {}
+
 table ErrorResponse {
   code:ErrorCode;
   message:string (required);
@@ -260,7 +264,9 @@ union Payload {
   WifiStatusRequest,
   WifiStatusResponse,
   WifiScanRequest,
-  WifiScanResponse
+  WifiScanResponse,
+  ShutdownRequest,
+  ShutdownResponse
 }
 
 table Envelope {

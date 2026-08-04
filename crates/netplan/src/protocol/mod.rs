@@ -98,6 +98,8 @@ pub enum Request {
         /// Maximum scan completion wait in milliseconds.
         timeout_ms: u32,
     },
+    /// Ask the daemon to stop after acknowledging this request.
+    Shutdown,
 }
 
 /// Configuration validation diagnostic.
@@ -249,6 +251,8 @@ pub enum Response {
         /// Available networks, sorted by connection and signal quality.
         networks: Vec<WifiNetwork>,
     },
+    /// The daemon accepted a shutdown request.
+    ShutdownAccepted,
     /// Typed daemon rejection.
     Error {
         /// Stable error code.
@@ -306,6 +310,7 @@ pub fn encode_request(request_id: u64, request: &Request) -> Vec<u8> {
             refresh: *refresh,
             timeout_ms: *timeout_ms,
         })),
+        Request::Shutdown => wire::PayloadT::ShutdownRequest(Box::default()),
     };
     encode_envelope(request_id, payload)
 }
@@ -348,6 +353,7 @@ pub fn decode_request(frame: &[u8]) -> Result<Frame<Request>> {
             refresh: request.refresh,
             timeout_ms: request.timeout_ms,
         },
+        wire::PayloadT::ShutdownRequest(_) => Request::Shutdown,
         _ => return Err(Error::Protocol("frame does not contain a request".into())),
     };
     Ok(Frame {
@@ -471,6 +477,7 @@ pub fn encode_response(request_id: u64, response: &Response) -> Vec<u8> {
             refreshed: *refreshed,
             networks: networks.iter().map(wifi_network_to_wire).collect(),
         })),
+        Response::ShutdownAccepted => wire::PayloadT::ShutdownResponse(Box::default()),
         Response::Error { code, message } => {
             wire::PayloadT::ErrorResponse(Box::new(wire::ErrorResponseT {
                 code: error_code_to_wire(*code),
@@ -590,6 +597,7 @@ pub fn decode_response(frame: &[u8]) -> Result<Frame<Response>> {
                 .map(wifi_network_from_wire)
                 .collect(),
         },
+        wire::PayloadT::ShutdownResponse(_) => Response::ShutdownAccepted,
         wire::PayloadT::ErrorResponse(response) => Response::Error {
             code: error_code_from_wire(response.code)?,
             message: response.message,
@@ -1020,6 +1028,31 @@ mod tests {
         assert_eq!(wire::Payload::ListJobsResponse.0, 17);
         assert_eq!(wire::Payload::NetworkStatusRequest.0, 18);
         assert_eq!(wire::Payload::WifiScanResponse.0, 23);
+        assert_eq!(wire::Payload::ShutdownRequest.0, 24);
+        assert_eq!(wire::Payload::ShutdownResponse.0, 25);
+    }
+
+    #[test]
+    fn shutdown_round_trip_is_typed_and_correlated() {
+        let request = Request::Shutdown;
+        let encoded = encode_request(48, &request);
+        assert_eq!(
+            decode_request(&encoded).ok(),
+            Some(Frame {
+                request_id: 48,
+                payload: request
+            })
+        );
+
+        let response = Response::ShutdownAccepted;
+        let encoded = encode_response(48, &response);
+        assert_eq!(
+            decode_response(&encoded).ok(),
+            Some(Frame {
+                request_id: 48,
+                payload: response
+            })
+        );
     }
 
     #[test]

@@ -23,6 +23,7 @@ plan、capability preflight、Windows backend 和 rollback classification。依�
 | Service | SCM query/start/stop、terminal-state wait 与 rollback | 实机 SMB service no-op |
 | Driver install | PnPUtil normal install/restart；动态加载 NewDev force update；处理 reboot-required | 仅 capability/build；没有 signed disposable driver fixture |
 | Hook | Before/after/after-rollback 阶段直接执行 executable 与 argument array；没有隐式 shell | 实机 success/failure 与 rollback |
+| Daemon lifecycle | SCM 自动启动 LocalSystem service、typed shutdown、后台 fallback，以及 CLI/daemon 入口的无 shell UAC 重启 | GNU target Clippy/build 与 Windows 11 后台 lifecycle smoke；跳过 service/UAC 实机切换 |
 
 ## Platform 与 protocol 边界
 

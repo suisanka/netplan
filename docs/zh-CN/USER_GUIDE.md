@@ -32,7 +32,7 @@ hook。功能是否可用取决于当前 Windows/PE 镜像里实际存在的 API
 - `x86_64-pc-windows-gnu` 需要 GNU Windows linker；`x86_64-pc-windows-msvc` 需要
   Visual Studio 2022 Build Tools。
 - 只有运行可选安全检查时才需要 `cargo-audit`。
-- 执行 Windows live 操作需要管理员权限。
+- 访问受保护 Windows daemon 需要管理员凭据或同意 UAC。
 
 MSVC target 固定 VC-LTL5 `5.3.1`。Tag release 会先在 Windows Server 2022 上运行
 target-level Clippy、test 与 release build，两个 target 均成功后才发布。
@@ -89,7 +89,28 @@ PE Netplan 在运行时探测功能。裁剪后的镜像可能需要添加相应
 \\.\pipe\pe-netplan-netpland-v1
 ```
 
-在管理员终端启动 daemon：
+如需持久运行，先把 `netplan.exe` 与 `netpland.exe` 放在最终目录，然后执行：
+
+```console
+netplan.exe enable
+```
+
+`enable` 会把 `netpland.exe` 作为 LocalSystem 账号的 `PE Netplan Daemon` Windows
+service 安装，设置为自动启动并立即启动。之后可使用：
+
+```console
+netplan.exe start
+netplan.exe stop
+netplan.exe disable
+```
+
+`stop` 只停止 service，仍保留自动启动；之后执行普通 daemon 命令时，如果没有
+`--no-autostart`，CLI 可能再次启动已安装 service。`disable` 会停止并卸载 service，但不
+删除文件。SCM 保存 daemon 绝对路径，移动 release 目录后请重新执行 `enable`。安装与
+卸载 service 只支持默认 endpoint。在普通终端运行时，CLI 会请求 UAC 提权，并在同一个
+控制台里等待提权子进程完成。
+
+临时前台运行时，可直接启动 daemon：
 
 ```console
 netpland.exe
@@ -102,9 +123,14 @@ netplan.exe ping
 ```
 
 Windows named pipe 仅限本机，拒绝远程 pipe client，只允许 `SYSTEM` 与 Administrators。
-CLI 不会自动提权。Endpoint 不存在时，CLI 默认尝试启动同目录下的 `netpland.exe`；
-只有调用者已经具备所需权限，并且 daemon 位于 CLI 同目录或 `PATH` 中时，才会成功。
-daemon 由 service manager 管理时请使用 `--no-autostart`。
+单次命令与 interactive 模式会在访问 pipe 前自动请求 UAC。直接运行 `netpland.exe` 时，
+它也会先检查 token；权限不足便通过 UAC `runas` 重新启动，不会等到创建 pipe 时再以
+`Access denied` 退出。取消提示会返回明确的权限错误。Endpoint 不存在时，提权后的 CLI
+优先启动已安装的 Windows service；没有安装 service 时才启动同目录下的 `netpland.exe`。
+`--no-autostart` 会阻止两种 daemon 自动启动路径，但不会降低 pipe ACL。
+
+`netplan rpc` 是例外：启动它的宿主必须已经提权。这里会拒绝自动 UAC 重启，因为跨提权
+边界无法可靠保留外部程序重定向的 JSON-RPC stdin/stdout handle。
 
 两个程序都可以使用自定义 endpoint：
 
@@ -147,8 +173,10 @@ Live apply 异步执行，最初可能返回 `running`。Job 只保存在 daemon
 
 ## 5. CLI 参考
 
-单次命令默认输出对齐的人类可读摘要与表格。添加 `--json` 可获得完整机器可读响应。错误
-写入 stderr 并返回非零 exit code；使用 `--json` 时，stderr 内容也是 JSON error object。
+单次命令默认输出自动换行的人类可读摘要。Adapter 与 Wi-Fi 对象使用多行记录，每个地址
+单独占一行；人类输出限制在 88 列，不再横向无限扩展。添加 `--json` 可获得完整机器可读
+响应。错误写入 stderr 并返回非零 exit code；使用 `--json` 时，stderr 内容也是 JSON
+error object。
 
 ### 5.1 全局选项
 
@@ -181,6 +209,10 @@ Typed daemon rejection 会使用 `permission_denied` 等稳定 code，而不是 
 
 | 命令 | 行为 |
 | --- | --- |
+| `enable` | 把默认 endpoint daemon 安装为自动启动的 Windows service 并启动；需要时请求 UAC |
+| `disable` | 停止并卸载 Windows service；需要时请求 UAC |
+| `start` | 启动已安装的默认 endpoint service；未安装时启动 sibling 后台 daemon |
+| `stop` | 停止已安装 service；未安装时通过 typed IPC 优雅停止后台 daemon |
 | `ping` | 返回 daemon 与 protocol 版本 |
 | `capabilities` | 返回 capability 的 `available`、`read_only`、`dry_run` 或 `unavailable` 状态及原因 |
 | `adapters` | 返回原生 adapter inventory |
@@ -196,6 +228,10 @@ Typed daemon rejection 会使用 `permission_denied` 等稳定 code，而不是 
 
 `status` 是本机状态快照，并不检测互联网连通性。如果 Wi-Fi 状态查询失败，错误写入
 `wifi_error`，adapter 信息仍会保留。
+
+四个 lifecycle 命令同样支持 `--json`。成功结果包含 `action`、`mode`
+（`windows-service` 或 `background-process`）、`installed`、`state` 与 `message`。它们是
+本地 CLI 操作，不是 JSON-RPC method。
 
 ### 5.3 交互模式
 
@@ -216,8 +252,9 @@ Endpoint 和 autostart 策略在进入交互模式时固定。嵌套执行 `inte
 
 ## 6. 网络与 Wi-Fi 状态
 
-默认 `adapters` 表格汇总 identity、status、hardware kind、MAC、地址与 description。
-使用 `adapters --json` 获取全部结构化字段：
+默认 `adapters` 多行记录汇总 identity、status、hardware kind、MAC、地址与 description。
+IPv4/IPv6 地址分别放在 continuation line，长地址列表不会再撑宽终端。使用
+`adapters --json` 获取全部结构化字段：
 
 - `if_index`、friendly `name`，以及可选 description/GUID/MAC；
 - operation `status` 和是否为物理硬件；
@@ -588,7 +625,7 @@ Transport status 非零后通过 `netplan_client_last_error` 复制错误消息�
 | 现象 | 检查项 |
 | --- | --- |
 | `系统找不到指定的文件` / endpoint 不存在 | 启动 `netpland`，确认两端 endpoint 相同；同目录 daemon 存在时也可以移除 `--no-autostart` |
-| 打开 pipe 时 `permission_denied` | 以 Administrator 运行 client，或检查 daemon account/pipe ACL |
+| 打开 pipe 时 `permission_denied` | 确认已同意 UAC；`netplan rpc` 的宿主需先提权；否则检查 daemon account/pipe ACL |
 | Wi-Fi `permission_denied` | 检查 Windows Wi-Fi/location 隐私策略与 service 状态 |
 | `unsupported` | 运行 `capabilities`；向镜像添加缺失组件/service，或移除该 operation |
 | Wi-Fi `not_found` | 确认无线 adapter 与驱动存在，并可被 IP Helper/Native Wi-Fi 看到 |
@@ -598,7 +635,7 @@ Transport status 非零后通过 `netplan_client_last_error` 复制错误消息�
 | Apply 长时间 `running` | 使用 `job <id>` 或 JSON-RPC `netplan.job.wait`；检查带原生 timeout 的 service/hardware operation |
 | Job ID 消失 | `netpland` 已重启；job 设计为仅保存在内存 |
 | JSON-RPC parse error | 每行只发送一个 UTF-8 JSON object；不要发送 JSON array 或跨行 object |
-| CLI autostart 失败 | 把 `netpland.exe` 放到 `netplan.exe` 同目录，确认权限，或显式启动 daemon |
+| CLI autostart 失败 | 把 `netpland.exe` 放到 `netplan.exe` 同目录、同意 UAC，或显式启动/安装 daemon |
 
 报告缺陷时，请提供 PE Netplan 版本、Windows/PE build、target triple、`ping`、
 `capabilities`、失败命令，以及完成脱敏的配置/响应。不要包含 literal password 或 PSK。
