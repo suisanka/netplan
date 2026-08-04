@@ -30,7 +30,25 @@ daemon protocol；`netpland` 本身不接受 JSON。
 | `netplan.job.get` | `{ "job_id": string }` | 当前 job 状态 |
 | `netplan.job.list` | 可选 job filter | 最新保留 job 与 limit 前总数 |
 | `netplan.job.wait` | wait 参数 | terminal job 状态或有界 timeout |
-| `netplan.rpc.discover` | 无 | 网关版本与支持的方法名 |
+| `netplan.rpc.discover` | 无 | 完整 method/type contract 与运行时版本 |
+
+## 机器可读契约
+
+[schemas/jsonrpc.json](../../schemas/jsonrpc.json) 是网关直接使用、并随 release 压缩包
+发布的权威契约。`methods` 中每一项都显式包含：
+
+- `name` 与人类可读 `summary`；
+- `params_required`；
+- `params` 的 JSON Schema；
+- `result` 的 JSON Schema。
+
+`AdapterInfo`、`WifiNetwork`、`Operation`、`JobSummary` 以及全部参数 object 等共享结构
+都定义在 `$defs` 中。所有 schema 使用契约声明的 JSON Schema 2020-12 dialect；`errors`
+定义网关可能产生的全部稳定 JSON-RPC code。
+
+`netplan.rpc.discover` 返回该契约，并在运行时加入 `gateway_version`、
+`daemon_protocol_version` 与 `config_schema_version`。只需 feature detection 的旧客户端
+仍可读取 `method_names`；`methods` 提供完整定义。
 
 配置方法接受：
 

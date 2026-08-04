@@ -31,7 +31,28 @@ methods.
 | `netplan.job.get` | `{ "job_id": string }` | current job state |
 | `netplan.job.list` | optional job filter | newest retained jobs and pre-limit total |
 | `netplan.job.wait` | wait parameters | terminal job state or bounded timeout |
-| `netplan.rpc.discover` | none | gateway versions and supported method names |
+| `netplan.rpc.discover` | none | complete method/type contract plus runtime versions |
+
+## Machine-readable contract
+
+[schemas/jsonrpc.json](../schemas/jsonrpc.json) is the canonical contract consumed by
+the gateway and shipped in release archives. Every entry in `methods` explicitly
+contains:
+
+- `name` and a human-readable `summary`;
+- `params_required`;
+- a JSON Schema for `params`;
+- a JSON Schema for `result`.
+
+Shared structures such as `AdapterInfo`, `WifiNetwork`, `Operation`, `JobSummary`, and
+every parameter object are defined under `$defs`. All schemas use the declared JSON
+Schema 2020-12 dialect. `errors` defines every stable JSON-RPC code emitted by the
+gateway.
+
+`netplan.rpc.discover` returns this contract with `gateway_version`,
+`daemon_protocol_version`, and `config_schema_version` added at runtime. The
+`method_names` array remains available for clients that only need feature detection;
+`methods` contains the full definitions.
 
 Configuration methods accept:
 

@@ -12,6 +12,8 @@ use crate::call_with_autostart;
 
 type RpcError = (i64, String, Option<Value>);
 
+const RPC_CONTRACT: &str = include_str!("../../../schemas/jsonrpc.json");
+
 const RPC_METHODS: &[&str] = &[
     "netplan.ping",
     "netplan.daemon.status",
@@ -322,6 +324,7 @@ fn map_request(method: &str, params: Value) -> Result<Request, RpcError> {
         "netplan.config.apply" => config_rpc_request(ConfigAction::Apply, params, true),
         "netplan.job.get" => {
             let params: JobParams = parse_params(params)?;
+            require_non_empty("job_id", &params.job_id)?;
             Ok(Request::JobStatus {
                 job_id: params.job_id,
             })
@@ -480,13 +483,7 @@ async fn execute_command(
         RpcCommand::ConfigDescribe => Ok(config_description()),
         RpcCommand::ConfigExample { format } => Ok(config_example(format)),
         RpcCommand::JobWait(params) => wait_for_job(client, params, no_autostart).await,
-        RpcCommand::Discover => Ok(json!({
-            "jsonrpc": "2.0",
-            "gateway_version": env!("CARGO_PKG_VERSION"),
-            "daemon_protocol_version": netplan::PROTOCOL_VERSION,
-            "config_schema_version": 1,
-            "methods": RPC_METHODS
-        })),
+        RpcCommand::Discover => rpc_contract(),
     }
 }
 
@@ -777,6 +774,33 @@ fn config_description() -> Value {
     })
 }
 
+fn rpc_contract() -> Result<Value, RpcError> {
+    let mut contract: Value = serde_json::from_str(RPC_CONTRACT).map_err(|error| {
+        (
+            -32010,
+            "Bundled JSON-RPC contract is invalid".into(),
+            Some(json!(error.to_string())),
+        )
+    })?;
+    {
+        let Some(contract) = contract.as_object_mut() else {
+            return Err((
+                -32010,
+                "Bundled JSON-RPC contract is not an object".into(),
+                None,
+            ));
+        };
+        contract.insert("gateway_version".into(), json!(env!("CARGO_PKG_VERSION")));
+        contract.insert(
+            "daemon_protocol_version".into(),
+            json!(netplan::PROTOCOL_VERSION),
+        );
+        contract.insert("config_schema_version".into(), json!(1));
+        contract.insert("method_names".into(), json!(RPC_METHODS));
+    }
+    Ok(contract)
+}
+
 fn config_example(format: ExampleFormat) -> Value {
     let (format_name, document) = match format {
         ExampleFormat::Yaml => (
@@ -969,6 +993,14 @@ mod tests {
     }
 
     #[test]
+    fn job_get_rejects_an_empty_identifier() {
+        assert!(matches!(
+            map_request("netplan.job.get", json!({"job_id": "  "})),
+            Err((-32602, _, _))
+        ));
+    }
+
+    #[test]
     fn adapter_selector_is_required_and_matches_all_supplied_fields() {
         assert!(matches!(
             map_command("netplan.adapter.get", json!({})),
@@ -1066,6 +1098,67 @@ mod tests {
             required_capabilities(&operations),
             vec!["network.ipv4", "wifi.profile"]
         );
+    }
+
+    #[test]
+    fn rpc_contract_defines_every_method_and_resolves_every_type_reference() {
+        let contract = match rpc_contract() {
+            Ok(contract) => contract,
+            Err(error) => panic!("bundled contract failed to load: {error:?}"),
+        };
+        assert_eq!(
+            contract.get("gateway_version").and_then(Value::as_str),
+            Some(env!("CARGO_PKG_VERSION"))
+        );
+        assert_eq!(
+            contract
+                .get("daemon_protocol_version")
+                .and_then(Value::as_u64),
+            Some(u64::from(netplan::PROTOCOL_VERSION))
+        );
+        let Some(methods) = contract.get("methods").and_then(Value::as_array) else {
+            panic!("contract methods must be an array");
+        };
+        let method_names = methods
+            .iter()
+            .map(|method| {
+                let Some(name) = method.get("name").and_then(Value::as_str) else {
+                    panic!("contract method is missing a string name: {method}");
+                };
+                assert!(method.get("params_required").is_some());
+                assert!(method.get("params").is_some());
+                assert!(method.get("result").is_some());
+                name
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(method_names, RPC_METHODS);
+        assert_eq!(contract.get("method_names"), Some(&json!(RPC_METHODS)));
+        assert_local_refs_resolve(&contract, &contract);
+    }
+
+    fn assert_local_refs_resolve(root: &Value, value: &Value) {
+        match value {
+            Value::Object(object) => {
+                if let Some(Value::String(reference)) = object.get("$ref") {
+                    let Some(pointer) = reference.strip_prefix('#') else {
+                        panic!("contract contains a non-local reference: {reference}");
+                    };
+                    assert!(
+                        root.pointer(pointer).is_some(),
+                        "unresolved contract reference: {reference}"
+                    );
+                }
+                for child in object.values() {
+                    assert_local_refs_resolve(root, child);
+                }
+            }
+            Value::Array(values) => {
+                for child in values {
+                    assert_local_refs_resolve(root, child);
+                }
+            }
+            _ => {}
+        }
     }
 
     #[test]

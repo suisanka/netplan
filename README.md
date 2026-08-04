@@ -57,6 +57,7 @@ netplan.exe ping
 netplan.exe capabilities
 netplan.exe adapters
 netplan.exe status
+netplan.exe status --json
 netplan.exe wifi status
 netplan.exe wifi scan
 netplan.exe wifi scan --cached
@@ -77,6 +78,10 @@ wireless interface and `--timeout-ms` to change the bounded 250–15000 ms wait.
 
 Interactive mode accepts the same subcommands without repeating `netplan.exe`, supports
 quoted Windows paths, and exits with `exit` or `quit`.
+
+One-shot commands use concise, aligned human-readable output by default. Add the global
+`--json` option before or after a subcommand to obtain the complete stable JSON shape;
+JSON mode also emits structured errors on stderr while retaining a nonzero exit code.
 
 `apply` is a dry-run unless `--live` is present. Live jobs return immediately in
 `running` state and are queried with `job`. Use `protect.management_interfaces` to name
@@ -100,8 +105,10 @@ JSON object per line:
 ```
 
 The gateway also provides single-capability/adapter lookup, bounded job waiting,
-configuration inspection, schema examples, and method discovery. The full method and
-parameter contract is documented in [docs/JSONRPC.md](docs/JSONRPC.md).
+configuration inspection, schema examples, and method discovery. The canonical
+machine-readable contract in [schemas/jsonrpc.json](schemas/jsonrpc.json) defines all
+methods, parameter schemas, result schemas, shared structure types, and errors; see
+[docs/JSONRPC.md](docs/JSONRPC.md).
 
 Rust programs can depend on `crates/netplan` and use `netplan::Client`. Native programs
 can include [include/netplan.h](include/netplan.h) and link `netplan.dll`; the C ABI

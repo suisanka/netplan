@@ -1,0 +1,548 @@
+{
+  "contract_version": 1,
+  "jsonrpc": "2.0",
+  "schema_dialect": "https://json-schema.org/draft/2020-12/schema",
+  "methods": [
+    {
+      "name": "netplan.ping",
+      "summary": "Probe daemon health and protocol compatibility.",
+      "params_required": false,
+      "params": { "$ref": "#/$defs/NoParams" },
+      "result": { "$ref": "#/$defs/PingResult" }
+    },
+    {
+      "name": "netplan.daemon.status",
+      "summary": "Read daemon uptime and retained job counters.",
+      "params_required": false,
+      "params": { "$ref": "#/$defs/NoParams" },
+      "result": { "$ref": "#/$defs/DaemonStatusResult" }
+    },
+    {
+      "name": "netplan.capabilities",
+      "summary": "List capability availability on the current image.",
+      "params_required": false,
+      "params": { "$ref": "#/$defs/NoParams" },
+      "result": { "$ref": "#/$defs/CapabilityListResult" }
+    },
+    {
+      "name": "netplan.capability.get",
+      "summary": "Find one capability by case-insensitive name.",
+      "params_required": true,
+      "params": { "$ref": "#/$defs/NameParams" },
+      "result": { "$ref": "#/$defs/Capability" }
+    },
+    {
+      "name": "netplan.adapters.list",
+      "summary": "List native network adapters.",
+      "params_required": false,
+      "params": { "$ref": "#/$defs/NoParams" },
+      "result": { "$ref": "#/$defs/AdapterListResult" }
+    },
+    {
+      "name": "netplan.adapter.get",
+      "summary": "Find the unique adapter matching every supplied selector field.",
+      "params_required": true,
+      "params": { "$ref": "#/$defs/AdapterSelectorParams" },
+      "result": { "$ref": "#/$defs/AdapterInfo" }
+    },
+    {
+      "name": "netplan.status",
+      "summary": "Read one timestamped adapter and Wi-Fi state snapshot.",
+      "params_required": false,
+      "params": { "$ref": "#/$defs/NoParams" },
+      "result": { "$ref": "#/$defs/NetworkStatusResult" }
+    },
+    {
+      "name": "netplan.wifi.status",
+      "summary": "Read native Wi-Fi interface connection state.",
+      "params_required": false,
+      "params": { "$ref": "#/$defs/WifiStatusParams" },
+      "result": { "$ref": "#/$defs/WifiStatusResult" }
+    },
+    {
+      "name": "netplan.wifi.scan",
+      "summary": "Scan for or read cached native Wi-Fi networks.",
+      "params_required": false,
+      "params": { "$ref": "#/$defs/WifiScanParams" },
+      "result": { "$ref": "#/$defs/WifiScanResult" }
+    },
+    {
+      "name": "netplan.config.validate",
+      "summary": "Validate one YAML or JSON configuration document.",
+      "params_required": true,
+      "params": { "$ref": "#/$defs/ConfigParams" },
+      "result": { "$ref": "#/$defs/ValidationResult" }
+    },
+    {
+      "name": "netplan.config.plan",
+      "summary": "Build the deterministic operation plan for a configuration.",
+      "params_required": true,
+      "params": { "$ref": "#/$defs/ConfigParams" },
+      "result": { "$ref": "#/$defs/PlanResult" }
+    },
+    {
+      "name": "netplan.config.inspect",
+      "summary": "Validate, plan, and list required capabilities.",
+      "params_required": true,
+      "params": { "$ref": "#/$defs/ConfigParams" },
+      "result": { "$ref": "#/$defs/ConfigInspectResult" }
+    },
+    {
+      "name": "netplan.config.apply",
+      "summary": "Submit a dry-run or explicitly live apply job.",
+      "params_required": true,
+      "params": { "$ref": "#/$defs/ConfigParams" },
+      "result": { "$ref": "#/$defs/ApplyResult" }
+    },
+    {
+      "name": "netplan.config.describe",
+      "summary": "Describe configuration formats, sections, and safe defaults.",
+      "params_required": false,
+      "params": { "$ref": "#/$defs/NoParams" },
+      "result": { "$ref": "#/$defs/ConfigDescriptionResult" }
+    },
+    {
+      "name": "netplan.config.example",
+      "summary": "Return a schema-valid placeholder configuration.",
+      "params_required": false,
+      "params": { "$ref": "#/$defs/ExampleParams" },
+      "result": { "$ref": "#/$defs/ConfigExampleResult" }
+    },
+    {
+      "name": "netplan.job.get",
+      "summary": "Read one retained apply job.",
+      "params_required": true,
+      "params": { "$ref": "#/$defs/JobParams" },
+      "result": { "$ref": "#/$defs/JobStatusResult" }
+    },
+    {
+      "name": "netplan.job.list",
+      "summary": "List retained jobs with an optional state filter and bound.",
+      "params_required": false,
+      "params": { "$ref": "#/$defs/JobListParams" },
+      "result": { "$ref": "#/$defs/JobListResult" }
+    },
+    {
+      "name": "netplan.job.wait",
+      "summary": "Wait for one job to reach a terminal state within a bound.",
+      "params_required": true,
+      "params": { "$ref": "#/$defs/JobWaitParams" },
+      "result": { "$ref": "#/$defs/JobStatusResult" }
+    },
+    {
+      "name": "netplan.rpc.discover",
+      "summary": "Return this complete method and type contract.",
+      "params_required": false,
+      "params": { "$ref": "#/$defs/NoParams" },
+      "result": { "$ref": "#/$defs/RpcContract" }
+    }
+  ],
+  "errors": [
+    { "code": -32700, "name": "parse_error", "description": "The input line is not valid JSON." },
+    { "code": -32600, "name": "invalid_request", "description": "The JSON-RPC envelope is invalid." },
+    { "code": -32601, "name": "method_not_found", "description": "The requested method is unknown." },
+    { "code": -32602, "name": "invalid_params", "description": "Parameters do not match the method contract." },
+    { "code": -32000, "name": "transport_error", "description": "The typed daemon endpoint could not be reached." },
+    { "code": -32002, "name": "wait_timeout", "description": "A bounded job wait expired." },
+    { "code": -32004, "name": "not_found", "description": "The requested capability, adapter, or job was not found." },
+    { "code": -32009, "name": "ambiguous", "description": "An adapter selector matched more than one adapter." },
+    { "code": -32010, "name": "daemon_error", "description": "The daemon rejected the request or returned an unexpected response." }
+  ],
+  "$defs": {
+    "NoParams": {
+      "description": "The params member may be omitted. If present, null, an empty object, or an empty array is accepted.",
+      "oneOf": [
+        { "type": "null" },
+        { "type": "object", "maxProperties": 0 },
+        { "type": "array", "maxItems": 0 }
+      ]
+    },
+    "NameParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": { "name": { "type": "string", "minLength": 1 } }
+    },
+    "AdapterSelectorParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "if_index": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        "name": { "type": "string", "minLength": 1 },
+        "guid": { "type": "string", "minLength": 1 },
+        "mac_address": { "type": "string", "pattern": "^(?:[:-]*[0-9A-Fa-f]){12}[:-]*$" },
+        "description_contains": { "type": "string", "minLength": 1 }
+      },
+      "anyOf": [
+        { "required": ["if_index"] },
+        { "required": ["name"] },
+        { "required": ["guid"] },
+        { "required": ["mac_address"] },
+        { "required": ["description_contains"] }
+      ]
+    },
+    "ConfigParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["document"],
+      "properties": {
+        "document": { "type": "string", "description": "Complete UTF-8 YAML or JSON configuration document." },
+        "format": { "type": "string", "enum": ["auto", "yaml", "yml", "json"], "default": "auto" },
+        "dry_run": { "type": "boolean", "default": true, "description": "Meaningful for netplan.config.apply; live mutation requires false." }
+      }
+    },
+    "ExampleParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "format": { "type": "string", "enum": ["yaml", "yml", "json"], "default": "yaml" }
+      }
+    },
+    "JobParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["job_id"],
+      "properties": { "job_id": { "type": "string", "minLength": 1 } }
+    },
+    "JobListParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "state": { "$ref": "#/$defs/JobState" },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 1000, "default": 100 }
+      }
+    },
+    "JobWaitParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["job_id"],
+      "properties": {
+        "job_id": { "type": "string", "minLength": 1 },
+        "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 300000, "default": 30000 },
+        "interval_ms": { "type": "integer", "minimum": 25, "maximum": 5000, "default": 100 }
+      }
+    },
+    "WifiStatusParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "if_index": { "type": "integer", "minimum": 0, "maximum": 4294967295 }
+      }
+    },
+    "WifiScanParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "if_index": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        "refresh": { "type": "boolean", "default": true },
+        "timeout_ms": { "type": "integer", "minimum": 250, "maximum": 15000, "default": 4000 }
+      }
+    },
+    "PingResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["daemon_version", "protocol_version"],
+      "properties": {
+        "daemon_version": { "type": "string" },
+        "protocol_version": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "DaemonStatusResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["daemon_version", "protocol_version", "started_at_unix_ms", "uptime_ms", "total_jobs", "queued_jobs", "running_jobs", "succeeded_jobs", "failed_jobs", "rolled_back_jobs"],
+      "properties": {
+        "daemon_version": { "type": "string" },
+        "protocol_version": { "type": "integer", "minimum": 0 },
+        "started_at_unix_ms": { "type": "integer", "minimum": 0 },
+        "uptime_ms": { "type": "integer", "minimum": 0 },
+        "total_jobs": { "type": "integer", "minimum": 0 },
+        "queued_jobs": { "type": "integer", "minimum": 0 },
+        "running_jobs": { "type": "integer", "minimum": 0 },
+        "succeeded_jobs": { "type": "integer", "minimum": 0 },
+        "failed_jobs": { "type": "integer", "minimum": 0 },
+        "rolled_back_jobs": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "CapabilityState": {
+      "type": "string",
+      "enum": ["unavailable", "read_only", "dry_run", "available"]
+    },
+    "Capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "state", "reason"],
+      "properties": {
+        "name": { "type": "string" },
+        "state": { "$ref": "#/$defs/CapabilityState" },
+        "reason": { "type": ["string", "null"] }
+      }
+    },
+    "CapabilityListResult": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Capability" }
+    },
+    "IpAddressInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["address", "prefix_length"],
+      "properties": {
+        "address": { "type": "string" },
+        "prefix_length": { "type": "integer", "minimum": 0, "maximum": 128 }
+      }
+    },
+    "AdapterInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["if_index", "name", "description", "guid", "mac_address", "status", "hardware", "ipv4", "ipv6"],
+      "properties": {
+        "if_index": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        "name": { "type": "string" },
+        "description": { "type": ["string", "null"] },
+        "guid": { "type": ["string", "null"] },
+        "mac_address": { "type": ["string", "null"] },
+        "status": { "type": "string" },
+        "hardware": { "type": "boolean" },
+        "ipv4": { "type": "array", "items": { "$ref": "#/$defs/IpAddressInfo" } },
+        "ipv6": { "type": "array", "items": { "$ref": "#/$defs/IpAddressInfo" } }
+      }
+    },
+    "AdapterListResult": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/AdapterInfo" }
+    },
+    "WifiInterfaceStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["if_index", "name", "guid", "state", "profile_name", "ssid", "ssid_hex", "signal_quality", "security_enabled", "authentication", "cipher", "rx_rate_kbps", "tx_rate_kbps"],
+      "properties": {
+        "if_index": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        "name": { "type": "string" },
+        "guid": { "type": ["string", "null"] },
+        "state": { "type": "string" },
+        "profile_name": { "type": ["string", "null"] },
+        "ssid": { "type": ["string", "null"] },
+        "ssid_hex": { "type": ["string", "null"] },
+        "signal_quality": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+        "security_enabled": { "type": ["boolean", "null"] },
+        "authentication": { "type": ["string", "null"] },
+        "cipher": { "type": ["string", "null"] },
+        "rx_rate_kbps": { "type": ["integer", "null"], "minimum": 0 },
+        "tx_rate_kbps": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "WifiNetwork": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interface_if_index", "interface_name", "ssid", "ssid_hex", "profile_name", "signal_quality", "security_enabled", "authentication", "cipher", "connectable", "not_connectable_reason", "connected", "bss_count"],
+      "properties": {
+        "interface_if_index": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        "interface_name": { "type": "string" },
+        "ssid": { "type": "string" },
+        "ssid_hex": { "type": "string" },
+        "profile_name": { "type": ["string", "null"] },
+        "signal_quality": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "security_enabled": { "type": "boolean" },
+        "authentication": { "type": "string" },
+        "cipher": { "type": "string" },
+        "connectable": { "type": "boolean" },
+        "not_connectable_reason": { "type": ["integer", "null"], "minimum": 0 },
+        "connected": { "type": "boolean" },
+        "bss_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "NetworkStatusResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["captured_at_unix_ms", "adapters", "wifi_interfaces", "wifi_error"],
+      "properties": {
+        "captured_at_unix_ms": { "type": "integer", "minimum": 0 },
+        "adapters": { "$ref": "#/$defs/AdapterListResult" },
+        "wifi_interfaces": { "type": "array", "items": { "$ref": "#/$defs/WifiInterfaceStatus" } },
+        "wifi_error": { "type": ["string", "null"] }
+      }
+    },
+    "WifiStatusResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interfaces"],
+      "properties": {
+        "interfaces": { "type": "array", "items": { "$ref": "#/$defs/WifiInterfaceStatus" } }
+      }
+    },
+    "WifiScanResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["refreshed", "networks"],
+      "properties": {
+        "refreshed": { "type": "boolean" },
+        "networks": { "type": "array", "items": { "$ref": "#/$defs/WifiNetwork" } }
+      }
+    },
+    "ValidationIssue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "message"],
+      "properties": {
+        "path": { "type": ["string", "null"] },
+        "message": { "type": "string" }
+      }
+    },
+    "ValidationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["valid", "issues"],
+      "properties": {
+        "valid": { "type": "boolean" },
+        "issues": { "type": "array", "items": { "$ref": "#/$defs/ValidationIssue" } }
+      }
+    },
+    "OperationRisk": {
+      "type": "string",
+      "enum": ["read_only", "low", "connectivity", "destructive"]
+    },
+    "Operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "capability", "summary", "risk", "target"],
+      "properties": {
+        "id": { "type": "string" },
+        "capability": { "type": "string" },
+        "summary": { "type": "string" },
+        "risk": { "$ref": "#/$defs/OperationRisk" },
+        "target": { "type": ["string", "null"] }
+      }
+    },
+    "PlanResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operations"],
+      "properties": {
+        "operations": { "type": "array", "items": { "$ref": "#/$defs/Operation" } }
+      }
+    },
+    "ConfigInspectResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["valid", "issues", "operations", "required_capabilities"],
+      "properties": {
+        "valid": { "type": "boolean" },
+        "issues": { "type": "array", "items": { "$ref": "#/$defs/ValidationIssue" } },
+        "operations": { "type": "array", "items": { "$ref": "#/$defs/Operation" } },
+        "required_capabilities": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+      }
+    },
+    "JobState": {
+      "type": "string",
+      "enum": ["queued", "running", "succeeded", "failed", "rolled_back"]
+    },
+    "ApplyResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["job_id", "state", "operations"],
+      "properties": {
+        "job_id": { "type": "string" },
+        "state": { "$ref": "#/$defs/JobState" },
+        "operations": { "type": "array", "items": { "$ref": "#/$defs/Operation" } }
+      }
+    },
+    "JobStatusResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["job_id", "state", "message"],
+      "properties": {
+        "job_id": { "type": "string" },
+        "state": { "$ref": "#/$defs/JobState" },
+        "message": { "type": ["string", "null"] }
+      }
+    },
+    "JobSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["job_id", "state", "message", "created_at_unix_ms", "updated_at_unix_ms"],
+      "properties": {
+        "job_id": { "type": "string" },
+        "state": { "$ref": "#/$defs/JobState" },
+        "message": { "type": ["string", "null"] },
+        "created_at_unix_ms": { "type": "integer", "minimum": 0 },
+        "updated_at_unix_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "JobListResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jobs", "total"],
+      "properties": {
+        "jobs": { "type": "array", "items": { "$ref": "#/$defs/JobSummary" } },
+        "total": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "ConfigDescriptionResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "formats", "apply_dry_run_default", "selector_fields", "secret_sources", "terminal_job_states", "top_level_sections"],
+      "properties": {
+        "schema_version": { "type": "integer", "const": 1 },
+        "formats": { "type": "array", "items": { "type": "string" } },
+        "apply_dry_run_default": { "type": "boolean", "const": true },
+        "selector_fields": { "type": "array", "items": { "type": "string" } },
+        "secret_sources": { "type": "array", "items": { "type": "string" } },
+        "terminal_job_states": { "type": "array", "items": { "$ref": "#/$defs/JobState" } },
+        "top_level_sections": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "ConfigExampleResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "document", "dry_run_recommended", "note"],
+      "properties": {
+        "format": { "type": "string", "enum": ["yaml", "json"] },
+        "document": { "type": "string" },
+        "dry_run_recommended": { "type": "boolean" },
+        "note": { "type": "string" }
+      }
+    },
+    "JsonSchema": {
+      "type": "object",
+      "description": "A JSON Schema object using the declared schema_dialect."
+    },
+    "RpcMethodDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "summary", "params_required", "params", "result"],
+      "properties": {
+        "name": { "type": "string" },
+        "summary": { "type": "string" },
+        "params_required": { "type": "boolean" },
+        "params": { "$ref": "#/$defs/JsonSchema" },
+        "result": { "$ref": "#/$defs/JsonSchema" }
+      }
+    },
+    "RpcErrorDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "name", "description"],
+      "properties": {
+        "code": { "type": "integer" },
+        "name": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "RpcContract": {
+      "type": "object",
+      "required": ["contract_version", "jsonrpc", "schema_dialect", "gateway_version", "daemon_protocol_version", "config_schema_version", "method_names", "methods", "errors", "$defs"],
+      "properties": {
+        "contract_version": { "type": "integer", "const": 1 },
+        "jsonrpc": { "type": "string", "const": "2.0" },
+        "schema_dialect": { "type": "string" },
+        "gateway_version": { "type": "string" },
+        "daemon_protocol_version": { "type": "integer", "minimum": 0 },
+        "config_schema_version": { "type": "integer", "const": 1 },
+        "method_names": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "methods": { "type": "array", "items": { "$ref": "#/$defs/RpcMethodDefinition" } },
+        "errors": { "type": "array", "items": { "$ref": "#/$defs/RpcErrorDefinition" } },
+        "$defs": { "type": "object", "additionalProperties": { "$ref": "#/$defs/JsonSchema" } }
+      }
+    }
+  }
+}

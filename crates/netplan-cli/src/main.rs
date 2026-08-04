@@ -4,6 +4,7 @@
 
 mod interactive;
 mod jsonrpc;
+mod output;
 
 #[cfg(windows)]
 #[global_allocator]
@@ -18,6 +19,8 @@ use netplan::client::default_endpoint;
 use netplan::protocol::{ConfigAction, Request, Response};
 use netplan::{Client, ConfigFormat, Error};
 use tokio::process::Command;
+
+use crate::output::{CliError, OutputFormat};
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
 enum FormatArg {
@@ -49,6 +52,9 @@ struct Args {
     /// Do not start a sibling `netpland` when the endpoint is absent.
     #[arg(long, global = true)]
     no_autostart: bool,
+    /// Print the complete machine-readable response as JSON.
+    #[arg(long, global = true)]
+    json: bool,
     #[command(subcommand)]
     command: Commands,
 }
@@ -130,25 +136,36 @@ enum WifiCommands {
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    match run(Args::parse()).await {
+    let args = Args::parse();
+    let output_format = OutputFormat::from_json(args.json);
+    match run(args, output_format).await {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
-            eprintln!("netplan: {error}");
+            eprintln!("{}", output::render_error(&error, output_format));
             ExitCode::FAILURE
         }
     }
 }
 
-async fn run(args: Args) -> Result<(), String> {
+async fn run(args: Args, output_format: OutputFormat) -> Result<(), CliError> {
     let client = Client::new(args.endpoint.clone());
     match args.command {
-        Commands::Rpc => jsonrpc::serve(client, args.no_autostart).await,
-        Commands::Interactive => interactive::serve(client, args.no_autostart).await,
-        command => run_command(&client, command, args.no_autostart).await,
+        Commands::Rpc => jsonrpc::serve(client, args.no_autostart)
+            .await
+            .map_err(CliError::from),
+        Commands::Interactive => interactive::serve(client, args.no_autostart, output_format)
+            .await
+            .map_err(CliError::from),
+        command => run_command(&client, command, args.no_autostart, output_format).await,
     }
 }
 
-async fn run_command(client: &Client, command: Commands, no_autostart: bool) -> Result<(), String> {
+async fn run_command(
+    client: &Client,
+    command: Commands,
+    no_autostart: bool,
+    output_format: OutputFormat,
+) -> Result<(), CliError> {
     let request = match command {
         Commands::Ping => Request::Ping,
         Commands::Capabilities => Request::Capabilities,
@@ -184,8 +201,7 @@ async fn run_command(client: &Client, command: Commands, no_autostart: bool) -> 
         }
     };
     let response = call_with_autostart(client, &request, no_autostart).await?;
-    let value = jsonrpc::response_value(response)?;
-    let rendered = serde_json::to_string_pretty(&value).map_err(|error| error.to_string())?;
+    let rendered = output::render(response, output_format)?;
     println!("{rendered}");
     Ok(())
 }
@@ -270,4 +286,27 @@ fn spawn_daemon(endpoint: &str) -> Result<(), String> {
         .spawn()
         .map_err(|error| format!("failed to start netpland: {error}"))?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn json_is_a_global_option_before_or_after_the_command() {
+        for arguments in [
+            ["netplan", "--json", "status"],
+            ["netplan", "status", "--json"],
+        ] {
+            let parsed = Args::try_parse_from(arguments);
+            assert!(matches!(
+                parsed,
+                Ok(Args {
+                    json: true,
+                    command: Commands::Status,
+                    ..
+                })
+            ));
+        }
+    }
 }

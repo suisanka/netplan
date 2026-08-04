@@ -4,16 +4,24 @@ use clap::{CommandFactory, Parser};
 use netplan::Client;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
+use crate::output::OutputFormat;
 use crate::{Commands, run_command};
 
 #[derive(Debug, Parser)]
 #[command(name = "netplan", disable_help_subcommand = true)]
 struct InteractiveArgs {
+    /// Print the complete machine-readable response as JSON.
+    #[arg(long, global = true)]
+    json: bool,
     #[command(subcommand)]
     command: Commands,
 }
 
-pub(crate) async fn serve(client: Client, no_autostart: bool) -> Result<(), String> {
+pub(crate) async fn serve(
+    client: Client,
+    no_autostart: bool,
+    default_output: OutputFormat,
+) -> Result<(), String> {
     let mut input = BufReader::new(tokio::io::stdin()).lines();
     let mut output = tokio::io::stdout();
     output
@@ -67,8 +75,13 @@ pub(crate) async fn serve(client: Client, no_autostart: bool) -> Result<(), Stri
             eprintln!("netplan: nested interactive and rpc modes are not supported");
             continue;
         }
-        if let Err(error) = run_command(&client, parsed.command, no_autostart).await {
-            eprintln!("netplan: {error}");
+        let output = if parsed.json {
+            OutputFormat::Json
+        } else {
+            default_output
+        };
+        if let Err(error) = run_command(&client, parsed.command, no_autostart, output).await {
+            eprintln!("{}", crate::output::render_error(&error, output));
         }
     }
     Ok(())
@@ -157,5 +170,17 @@ mod tests {
             split_command_line("\u{feff}status"),
             Ok(vec!["status".into()])
         );
+    }
+
+    #[test]
+    fn json_can_be_selected_for_one_interactive_command() {
+        let parsed = InteractiveArgs::try_parse_from(["netplan", "status", "--json"]);
+        assert!(matches!(
+            parsed,
+            Ok(InteractiveArgs {
+                json: true,
+                command: Commands::Status
+            })
+        ));
     }
 }

@@ -147,7 +147,8 @@ Live apply 异步执行，最初可能返回 `running`。Job 只保存在 daemon
 
 ## 5. CLI 参考
 
-所有单次命令成功时都输出格式化 JSON；错误写入 stderr，并返回非零 exit code。
+单次命令默认输出对齐的人类可读摘要与表格。添加 `--json` 可获得完整机器可读响应。错误
+写入 stderr 并返回非零 exit code；使用 `--json` 时，stderr 内容也是 JSON error object。
 
 ### 5.1 全局选项
 
@@ -155,9 +156,26 @@ Live apply 异步执行，最初可能返回 `running`。Job 只保存在 daemon
 | --- | --- |
 | `--endpoint <ENDPOINT>` | 覆盖 named pipe 或开发用 Unix socket |
 | `--no-autostart` | endpoint 缺失时也绝不启动 sibling daemon |
+| `--json` | 输出完整稳定的 JSON response，而不是人类可读格式 |
 | `--help`、`--version` | 输出帮助或版本 |
 
 全局选项可以出现在子命令之前或之后。
+
+```console
+netplan.exe --json status
+netplan.exe status --json
+```
+
+两种写法等价。`rpc` 始终使用换行分隔的 JSON-RPC，不受此选项影响。
+
+成功时保留下文各命令对应的 JSON 结构。CLI 层失败时向 stderr 写入下列单个 object，并
+以非零状态退出：
+
+```json
+{"error":{"code":"cli_error","message":"diagnostic"}}
+```
+
+Typed daemon rejection 会使用 `permission_denied` 等稳定 code，而不是 `cli_error`。
 
 ### 5.2 命令
 
@@ -192,17 +210,21 @@ netplan> exit
 
 可使用 `help`、`exit` 或 `quit`。支持单引号、双引号，并保留 Windows 反斜杠。
 Endpoint 和 autostart 策略在进入交互模式时固定。嵌套执行 `interactive` 或 `rpc` 会被
-拒绝。PowerShell 管道第一条命令前存在 UTF-8 BOM 时也能正常解析。
+拒绝。PowerShell 管道第一条命令前存在 UTF-8 BOM 时也能正常解析。使用
+`interactive --json` 可让所有命令保持 JSON 输出；也可以只在 prompt 内某条命令末尾
+添加 `--json`。
 
 ## 6. 网络与 Wi-Fi 状态
 
-`adapters` 返回：
+默认 `adapters` 表格汇总 identity、status、hardware kind、MAC、地址与 description。
+使用 `adapters --json` 获取全部结构化字段：
 
 - `if_index`、friendly `name`，以及可选 description/GUID/MAC；
 - operation `status` 和是否为物理硬件；
 - 带 prefix length 的 IPv4/IPv6 地址。
 
-`status` 额外返回 `captured_at_unix_ms`、`wifi_interfaces` 和可选 `wifi_error`。已连接
+JSON 形式的 `status` 额外返回 `captured_at_unix_ms`、`wifi_interfaces` 和可选
+`wifi_error`。已连接
 的 Wi-Fi interface 包含 SSID 显示文本和精确的 `ssid_hex`、信号质量、profile name、
 authentication/cipher、安全状态以及 RX/TX rate。
 
@@ -489,11 +511,13 @@ netplan.exe --no-autostart rpc
 {"jsonrpc":"2.0","id":3,"method":"netplan.config.inspect","params":{"format":"yaml","document":"version: 1\n"}}
 ```
 
-使用 `netplan.rpc.discover` 获取支持的方法。网关提供 health、daemon status、capability、
-adapter lookup、network/Wi-Fi query、配置 validate/plan/inspect/apply、job get/list/wait、
-配置 metadata/example 和方法发现。Notification 省略 `id`，不会产生输出。
+使用 `netplan.rpc.discover` 获取完整 method、parameter、result、共享类型与 error 契约。
+网关提供 health、daemon status、capability、adapter lookup、network/Wi-Fi query、配置
+validate/plan/inspect/apply、job get/list/wait、配置 metadata/example 和方法发现。
+Notification 省略 `id`，不会产生输出。
 
-完整 method、parameter、timeout、result 与 error 约定见 [JSONRPC.md](JSONRPC.md)。
+同一份机器可读契约随仓库提供于
+[schemas/jsonrpc.json](../../schemas/jsonrpc.json)；详见 [JSONRPC.md](JSONRPC.md)。
 
 ## 10. Rust SDK
 

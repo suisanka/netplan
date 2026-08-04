@@ -55,6 +55,7 @@ netplan.exe ping
 netplan.exe capabilities
 netplan.exe adapters
 netplan.exe status
+netplan.exe status --json
 netplan.exe wifi status
 netplan.exe wifi scan
 netplan.exe wifi scan --cached
@@ -73,6 +74,10 @@ netplan.exe interactive
 
 交互模式直接接受相同的子命令，不需要重复输入 `netplan.exe`；它支持带引号的 Windows
 路径，并通过 `exit` 或 `quit` 退出。
+
+单次命令默认输出简洁、对齐的人类可读摘要/表格。在子命令前后添加全局 `--json` 可获得
+完整且稳定的 JSON 结构；JSON 模式的错误也会以结构化 JSON 写入 stderr，同时保持非零
+exit code。
 
 未提供 `--live` 时，`apply` 始终是 dry-run。Live job 通常先返回 `running`，之后使用
 `job` 查询。通过 `protect.management_interfaces` 声明绝不能变更的接口；daemon 会在
@@ -94,7 +99,9 @@ netplan.exe interactive
 ```
 
 网关还提供单 capability/adapter 查询、有界 job 等待、配置检查、schema 示例和方法发现。
-完整方法与参数约定见[中文 JSON-RPC 文档](docs/zh-CN/JSONRPC.md)。
+[schemas/jsonrpc.json](schemas/jsonrpc.json) 是机器可读的权威契约，显式定义全部 method、
+parameter schema、result schema、共享结构类型与错误；详见
+[中文 JSON-RPC 文档](docs/zh-CN/JSONRPC.md)。
 
 Rust 程序可以依赖 `crates/netplan` 并使用 `netplan::Client`。Native 程序可以包含
 [include/netplan.h](include/netplan.h) 并链接 `netplan.dll`；C ABI 接收和返回

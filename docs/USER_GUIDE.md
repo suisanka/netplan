@@ -155,8 +155,9 @@ memory and disappear when `netpland` restarts.
 
 ## 5. CLI reference
 
-All one-shot successful commands print pretty JSON. Errors are written to stderr and
-return a nonzero exit code.
+One-shot commands print aligned human-readable summaries and tables by default. Add
+`--json` for the complete machine-readable response. Errors are written to stderr and
+return a nonzero exit code; with `--json`, stderr contains a JSON error object.
 
 ### 5.1 Global options
 
@@ -164,9 +165,28 @@ return a nonzero exit code.
 | --- | --- |
 | `--endpoint <ENDPOINT>` | Override the named pipe or development Unix socket |
 | `--no-autostart` | Never start a missing sibling daemon |
+| `--json` | Print the complete stable JSON response instead of human output |
 | `--help`, `--version` | Print command help or version |
 
 Global options may appear before or after a subcommand.
+
+```console
+netplan.exe --json status
+netplan.exe status --json
+```
+
+Both forms are equivalent. `rpc` always uses newline-delimited JSON-RPC regardless of
+this option.
+
+Successful JSON output keeps the command-specific shapes documented below. A CLI-level
+failure writes this single object to stderr and exits nonzero:
+
+```json
+{"error":{"code":"cli_error","message":"diagnostic"}}
+```
+
+Typed daemon rejections use their stable code, such as `permission_denied`, instead of
+`cli_error`.
 
 ### 5.2 Commands
 
@@ -202,17 +222,19 @@ netplan> exit
 Use `help`, `exit`, or `quit`. Single and double quotes are supported and Windows
 backslashes are preserved. The endpoint and autostart policy are fixed when interactive
 mode starts. Nested `interactive` and `rpc` commands are rejected. A UTF-8 BOM on the
-first piped PowerShell command is accepted.
+first piped PowerShell command is accepted. Start with `interactive --json` to keep JSON
+for every command, or append `--json` to one command inside the prompt.
 
 ## 6. Network and Wi-Fi status
 
-`adapters` returns:
+The default `adapters` table summarizes identity, status, hardware kind, MAC, addresses,
+and description. Use `adapters --json` for every structured field:
 
 - `if_index`, friendly `name`, optional description/GUID/MAC;
 - operational `status` and whether the interface is physical hardware;
 - assigned IPv4/IPv6 addresses with prefix lengths.
 
-`status` adds `captured_at_unix_ms`, `wifi_interfaces`, and an optional `wifi_error`.
+The JSON form of `status` adds `captured_at_unix_ms`, `wifi_interfaces`, and an optional `wifi_error`.
 Connected Wi-Fi interfaces include SSID display text and exact `ssid_hex`, signal
 quality, profile name, authentication/cipher, security state, and RX/TX rates.
 
@@ -512,13 +534,14 @@ Send one UTF-8 JSON-RPC 2.0 object per line and read one response per line:
 {"jsonrpc":"2.0","id":3,"method":"netplan.config.inspect","params":{"format":"yaml","document":"version: 1\n"}}
 ```
 
-Use `netplan.rpc.discover` to obtain supported method names. The gateway supports health,
-daemon status, capabilities, adapter lookup, network/Wi-Fi queries, configuration
-validation/planning/inspection/apply, job get/list/wait, configuration metadata/examples,
-and method discovery. Notifications omit `id` and produce no output.
+Use `netplan.rpc.discover` to obtain the complete method, parameter, result, shared-type,
+and error contract. The gateway supports health, daemon status, capabilities, adapter
+lookup, network/Wi-Fi queries, configuration validation/planning/inspection/apply, job
+get/list/wait, configuration metadata/examples, and method discovery. Notifications
+omit `id` and produce no output.
 
-The full method, parameter, timeout, result, and error contract is in
-[JSONRPC.md](JSONRPC.md).
+The same machine-readable contract is shipped as
+[schemas/jsonrpc.json](../schemas/jsonrpc.json); see [JSONRPC.md](JSONRPC.md).
 
 ## 10. Rust SDK
 

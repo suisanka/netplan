@@ -80,6 +80,7 @@ bin/netpland.exe
 lib/netplan.dll
 include/netplan.h
 schemas/ipc.fbs
+schemas/jsonrpc.json
 examples/
 docs/
 README.md
