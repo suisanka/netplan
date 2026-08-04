@@ -44,8 +44,9 @@ plan、capability preflight、Windows backend 和 rollback classification。依�
 
 - Native format、Clippy、unit test、doc 与 package check。
 - `x86_64-pc-windows-gnu` strict Clippy 与 release build。
+- `x86_64-pc-windows-msvc` 在 Windows Server 2022 上使用 VC-LTL5 执行 strict
+  Clippy、test 与 release build。两个 Windows target 均通过后才能创建 GitHub Release。
 - Windows 11 FlatBuffers、JSON-RPC、Rust SDK/CLI、C DLL、protection、live apply 与
   rollback smoke test。
-- `x86_64-pc-windows-msvc` 保留 VC-LTL5 配置，但不是本版本 verification gate。
 
 本机 AutoIt reference tree 已由 `.gitignore` 排除，不属于仓库或任何 Cargo package。

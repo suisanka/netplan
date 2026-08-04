@@ -91,7 +91,8 @@ Windows-target Clippy checks.
 The `x86_64-pc-windows-msvc` configuration uses VC-LTL5 `5.3.1`, whose link search
 paths replace the MSVC runtime import libraries with the Windows-compatible VC-LTL
 variants. VC-LTL is target-gated and is not linked into GNU or non-Windows builds. The
-MSVC configuration is present but was not validated for this version.
+tagged-release workflow validates this target on Windows Server 2022 before publishing
+the MSVC archive.
 
 The CLI, daemon, and C DLL select mimalloc `0.1.52` as their Rust global allocator on
 Windows. The SDK crate deliberately leaves allocator selection to its host process.

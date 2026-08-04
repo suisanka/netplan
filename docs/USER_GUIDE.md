@@ -3,8 +3,8 @@
 English | [简体中文](zh-CN/USER_GUIDE.md)
 
 This guide covers building, deploying, operating, configuring, and integrating PE
-Netplan 0.1. It describes the current repository state. There is no installer or
-published binary release yet.
+Netplan 0.1. It describes the current repository state. There is no installer; tagged
+GitHub releases provide GNU and MSVC binary archives.
 
 ## 1. What PE Netplan does
 
@@ -32,12 +32,13 @@ services, and hardware present in the current Windows or PE image.
 ### 2.1 Prerequisites
 
 - Rust `1.97.1`; `rust-toolchain.toml` selects it automatically through rustup.
-- A GNU Windows linker for the verified `x86_64-pc-windows-gnu` release path.
+- A GNU Windows linker for `x86_64-pc-windows-gnu`, or Visual Studio 2022 Build Tools
+  for `x86_64-pc-windows-msvc`.
 - `cargo-audit` only when running the optional security gate.
 - Administrator rights to run live Windows operations.
 
-MSVC/VC-LTL configuration exists, but this version has not been verified with MSVC.
-Use the GNU build for tested deployments.
+The MSVC target pins VC-LTL5 `5.3.1`. Tagged releases run target-level Clippy, tests,
+and release builds on Windows Server 2022 before publishing either target.
 
 ### 2.2 Build
 
@@ -51,7 +52,7 @@ cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu -- -D warn
 cargo build --workspace --release --target x86_64-pc-windows-gnu
 ```
 
-The Windows artifacts are written under:
+The GNU Windows artifacts are written under:
 
 ```text
 target/x86_64-pc-windows-gnu/release/netpland.exe
@@ -59,9 +60,16 @@ target/x86_64-pc-windows-gnu/release/netplan.exe
 target/x86_64-pc-windows-gnu/release/netplan.dll
 ```
 
+Use `x86_64-pc-windows-msvc` in the build command and path for the MSVC/VC-LTL
+variant.
+
 For a CLI-only deployment, copy `netpland.exe` and `netplan.exe` into the same
 directory. For native integration, also copy `netplan.dll`, `include/netplan.h`, and
 `schemas/ipc.fbs`. The C DLL is optional for CLI/JSON-RPC use.
+
+Pushing a version tag automatically gates both Windows targets, creates one ZIP plus
+SHA-256 checksum per target, and publishes one GitHub Release. See
+[RELEASING.md](RELEASING.md).
 
 ### 2.3 PE image requirements
 

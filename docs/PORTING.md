@@ -49,10 +49,10 @@ verification note rather than pretending unavailable test hardware was exercised
 
 - Native format, Clippy, unit tests, docs and package checks.
 - `x86_64-pc-windows-gnu` strict Clippy and release build.
+- `x86_64-pc-windows-msvc` strict Clippy, tests, and release build on Windows Server
+  2022 with VC-LTL5. Both Windows targets must pass before a GitHub Release is created.
 - Windows 11 FlatBuffers, JSON-RPC, Rust SDK/CLI, C DLL, protection, live apply and
   rollback smoke tests.
-- `x86_64-pc-windows-msvc` remains configured with VC-LTL5 but is not a verification
-  gate for this version.
 
 The local AutoIt reference tree is excluded by `.gitignore` and is not part of the
 repository or any Cargo package.

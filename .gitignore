@@ -4,6 +4,7 @@
 
 # Rust build artifacts and local tooling.
 /target/
+/dist/
 **/*.rs.bk
 /.cargo-local/
 /.local/

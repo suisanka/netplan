@@ -3,7 +3,7 @@
 [English](../USER_GUIDE.md) | 简体中文
 
 本文完整说明 PE Netplan 0.1 的构建、部署、日常操作、配置与外部集成。内容以当前仓库
-为准；项目目前尚未提供安装器或已发布的预编译二进制。
+为准；项目不提供安装器，带 tag 的 GitHub Release 提供 GNU 与 MSVC 二进制压缩包。
 
 ## 1. PE Netplan 的作用
 
@@ -29,11 +29,13 @@ hook。功能是否可用取决于当前 Windows/PE 镜像里实际存在的 API
 ### 2.1 前置条件
 
 - Rust `1.97.1`；通过 rustup 时，`rust-toolchain.toml` 会自动选择该版本。
-- 经过验证的 `x86_64-pc-windows-gnu` release 路径需要 GNU Windows linker。
+- `x86_64-pc-windows-gnu` 需要 GNU Windows linker；`x86_64-pc-windows-msvc` 需要
+  Visual Studio 2022 Build Tools。
 - 只有运行可选安全检查时才需要 `cargo-audit`。
 - 执行 Windows live 操作需要管理员权限。
 
-仓库包含 MSVC/VC-LTL 配置，但本版本没有验证 MSVC。需要已验证部署时应使用 GNU 构建。
+MSVC target 固定 VC-LTL5 `5.3.1`。Tag release 会先在 Windows Server 2022 上运行
+target-level Clippy、test 与 release build，两个 target 均成功后才发布。
 
 ### 2.2 构建命令
 
@@ -47,7 +49,7 @@ cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu -- -D warn
 cargo build --workspace --release --target x86_64-pc-windows-gnu
 ```
 
-Windows 产物位于：
+GNU Windows 产物位于：
 
 ```text
 target/x86_64-pc-windows-gnu/release/netpland.exe
@@ -55,9 +57,15 @@ target/x86_64-pc-windows-gnu/release/netplan.exe
 target/x86_64-pc-windows-gnu/release/netplan.dll
 ```
 
+构建 MSVC/VC-LTL 版本时，将 build command 与路径里的 target 改为
+`x86_64-pc-windows-msvc`。
+
 仅使用 CLI 时，把 `netpland.exe` 和 `netplan.exe` 复制到同一目录。Native 集成还需要
 复制 `netplan.dll`、`include/netplan.h` 与 `schemas/ipc.fbs`。CLI/JSON-RPC 不依赖 C
 DLL。
+
+推送版本 tag 后会自动验证两个 Windows target，为每个 target 生成 ZIP 与 SHA-256
+checksum，并发布同一个 GitHub Release。详见[发布指南](RELEASING.md)。
 
 ### 2.3 PE 镜像组件
 

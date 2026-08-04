@@ -81,7 +81,8 @@ Generated module 特意在 file、namespace 与 inner-module scope 添加 lint e
 
 `x86_64-pc-windows-msvc` 配置使用 VC-LTL5 `5.3.1`；其 link search path 用兼容 Windows
 的 VC-LTL variant 替代 MSVC runtime import library。VC-LTL 仅对该 target 生效，不会
-链接到 GNU 或非 Windows build。仓库已配置 MSVC，但本版本没有验证该路径。
+链接到 GNU 或非 Windows build。Tag release workflow 会在 Windows Server 2022 上
+验证该 target，通过后才发布 MSVC 压缩包。
 
 CLI、daemon 与 C DLL 在 Windows 上选择 mimalloc `0.1.52` 作为 Rust global allocator。
 SDK crate 不替宿主进程选择 allocator。

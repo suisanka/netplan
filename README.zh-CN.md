@@ -24,7 +24,8 @@ PE 镜像可能缺少无线网卡、API 或服务，因此 Wi-Fi 与 SMB 由 cap
 
 ## 构建
 
-固定工具链包含 GNU 与 MSVC Windows target。本版本经过验证的 release 路径是 GNU：
+固定工具链包含 GNU 与 MSVC Windows target。Tag release 会同时验证并发布两个 target。
+GNU build 在 Linux 上交叉编译：
 
 ```console
 cargo fmt --all -- --check
@@ -34,8 +35,8 @@ cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu -- -D warn
 cargo build --workspace --release --target x86_64-pc-windows-gnu
 ```
 
-MSVC 配置固定 VC-LTL5 `5.3.1`，并且仅对 MSVC target 生效；本版本没有验证该路径。
-两个 Windows target 的三个最终交付面均使用 mimalloc `0.1.52`：
+MSVC build 在 Windows Server 2022 上运行，固定 VC-LTL5 `5.3.1`，且 VC-LTL 仅对
+MSVC target 生效。两个 Windows target 的三个最终交付面均使用 mimalloc `0.1.52`：
 
 ```console
 cargo build --workspace --release --target x86_64-pc-windows-msvc
@@ -123,4 +124,5 @@ PE Netplan 使用 [Mozilla Public License 2.0](LICENSE)。
 | 完整使用指南 | [User guide](docs/USER_GUIDE.md) | [使用指南](docs/zh-CN/USER_GUIDE.md) |
 | JSON-RPC 网关 | [JSON-RPC](docs/JSONRPC.md) | [JSON-RPC](docs/zh-CN/JSONRPC.md) |
 | Rust SDK、C ABI 与 IPC | [Integration](docs/INTEGRATION.md) | [集成指南](docs/zh-CN/INTEGRATION.md) |
+| GitHub tag 自动发布 | [Release guide](docs/RELEASING.md) | [发布指南](docs/zh-CN/RELEASING.md) |
 | 实现与验证矩阵 | [Porting matrix](docs/PORTING.md) | [移植矩阵](docs/zh-CN/PORTING.md) |

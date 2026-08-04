@@ -1,0 +1,222 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  RUSTUP_TOOLCHAIN: 1.97.1
+
+jobs:
+  validate:
+    name: Validate release tag
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out the release tag
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Match the tag to the Cargo version
+        run: scripts/check-release-tag.sh "$GITHUB_REF_NAME"
+
+  windows-gnu:
+    name: Windows x86_64 GNU
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      RELEASE_TARGET: x86_64-pc-windows-gnu
+
+    steps:
+      - name: Check out the release tag
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install the Windows GNU linker
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends gcc-mingw-w64-x86-64
+
+      - name: Install the pinned Rust toolchain
+        run: |
+          rustup toolchain install "$RUSTUP_TOOLCHAIN" \
+            --profile minimal \
+            --component clippy \
+            --component rustfmt \
+            --target "$RELEASE_TARGET"
+          rustc --version
+          cargo --version
+
+      - name: Verify source, native tests, and Windows GNU target
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets --locked -- -D warnings
+          cargo test --workspace --locked
+          cargo clippy --workspace --all-targets --locked \
+            --target "$RELEASE_TARGET" -- -D warnings
+
+      - name: Build Windows GNU release binaries
+        run: cargo build --workspace --release --locked --target "$RELEASE_TARGET"
+
+      - name: Stage Windows GNU release binaries
+        shell: bash
+        run: |
+          release_root="target/${RELEASE_TARGET}/release"
+          stage_root="target/release-staging/${RELEASE_TARGET}"
+          install -d "$stage_root/bin" "$stage_root/lib"
+          install -m 0755 \
+            "$release_root/netplan.exe" \
+            "$release_root/netpland.exe" \
+            "$stage_root/bin/"
+          install -m 0644 \
+            "$release_root/netplan.dll" \
+            "$release_root/libnetplan.dll.a" \
+            "$stage_root/lib/"
+
+      - name: Upload Windows GNU staging artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-${{ env.RELEASE_TARGET }}
+          path: target/release-staging/${{ env.RELEASE_TARGET }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  windows-msvc:
+    name: Windows x86_64 MSVC + VC-LTL
+    needs: validate
+    runs-on: windows-2022
+    timeout-minutes: 45
+    env:
+      RELEASE_TARGET: x86_64-pc-windows-msvc
+
+    steps:
+      - name: Check out the release tag
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install the pinned Rust toolchain
+        shell: pwsh
+        run: |
+          rustup toolchain install $env:RUSTUP_TOOLCHAIN `
+            --profile minimal `
+            --component clippy `
+            --component rustfmt `
+            --target $env:RELEASE_TARGET
+          rustc --version
+          cargo --version
+
+      - name: Verify Windows MSVC target
+        shell: pwsh
+        run: |
+          cargo clippy --workspace --all-targets --locked `
+            --target $env:RELEASE_TARGET -- -D warnings
+          cargo test --workspace --locked --target $env:RELEASE_TARGET
+
+      - name: Build Windows MSVC release binaries
+        shell: pwsh
+        run: cargo build --workspace --release --locked --target $env:RELEASE_TARGET
+
+      - name: Stage Windows MSVC release binaries
+        shell: pwsh
+        run: |
+          $releaseRoot = "target/$env:RELEASE_TARGET/release"
+          $stageRoot = "target/release-staging/$env:RELEASE_TARGET"
+          New-Item -ItemType Directory -Force "$stageRoot/bin", "$stageRoot/lib" | Out-Null
+
+          Copy-Item -LiteralPath "$releaseRoot/netplan.exe" -Destination "$stageRoot/bin/"
+          Copy-Item -LiteralPath "$releaseRoot/netpland.exe" -Destination "$stageRoot/bin/"
+          Copy-Item -LiteralPath "$releaseRoot/netplan.dll" -Destination "$stageRoot/lib/"
+
+          $importLibrary = "$releaseRoot/netplan.dll.lib"
+          if (-not (Test-Path -LiteralPath $importLibrary -PathType Leaf)) {
+            throw "MSVC DLL import library is missing: $importLibrary"
+          }
+          Copy-Item -LiteralPath $importLibrary -Destination "$stageRoot/lib/"
+
+      - name: Upload Windows MSVC staging artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-${{ env.RELEASE_TARGET }}
+          path: target/release-staging/${{ env.RELEASE_TARGET }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  publish:
+    name: Publish GitHub Release
+    needs:
+      - windows-gnu
+      - windows-msvc
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: write
+
+    steps:
+      - name: Check out the release tag
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Download Windows GNU staging artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-x86_64-pc-windows-gnu
+          path: target/release-staging/x86_64-pc-windows-gnu
+
+      - name: Download Windows MSVC staging artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-x86_64-pc-windows-msvc
+          path: target/release-staging/x86_64-pc-windows-msvc
+
+      - name: Install the release archiver
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends zip
+
+      - name: Package GNU and MSVC release assets
+        shell: bash
+        run: |
+          scripts/package-release.sh "$GITHUB_REF_NAME" x86_64-pc-windows-gnu
+          scripts/package-release.sh "$GITHUB_REF_NAME" x86_64-pc-windows-msvc
+
+      - name: Upload packaged workflow artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pe-netplan-${{ github.ref_name }}-release-assets
+          path: |
+            dist/*.zip
+            dist/*.zip.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          release_flags=()
+          release_version="${GITHUB_REF_NAME#v}"
+          if [[ "${release_version%%+*}" == *-* ]]; then
+            release_flags+=(--prerelease)
+          fi
+
+          gnu_name="pe-netplan-${GITHUB_REF_NAME}-x86_64-pc-windows-gnu.zip"
+          msvc_name="pe-netplan-${GITHUB_REF_NAME}-x86_64-pc-windows-msvc.zip"
+          gh release create "$GITHUB_REF_NAME" \
+            "dist/${gnu_name}#PE Netplan Windows x86_64 GNU" \
+            "dist/${gnu_name}.sha256#GNU SHA-256 checksum" \
+            "dist/${msvc_name}#PE Netplan Windows x86_64 MSVC + VC-LTL" \
+            "dist/${msvc_name}.sha256#MSVC SHA-256 checksum" \
+            --verify-tag \
+            --generate-notes \
+            "${release_flags[@]}"

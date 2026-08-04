@@ -24,8 +24,8 @@ services. Query `netplan capabilities` instead of assuming a feature exists.
 
 ## Build
 
-The pinned toolchain includes both GNU and MSVC Windows targets. The verified release
-path for this version is GNU:
+The pinned toolchain includes both GNU and MSVC Windows targets. Tagged releases gate
+and publish both targets. The GNU build is cross-compiled on Linux:
 
 ```console
 cargo fmt --all -- --check
@@ -35,9 +35,9 @@ cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu -- -D warn
 cargo build --workspace --release --target x86_64-pc-windows-gnu
 ```
 
-The MSVC configuration pins VC-LTL5 `5.3.1`; it is intentionally target-gated and was
-not validated for this version. Both Windows targets select mimalloc `0.1.52` in the
-three final delivery surfaces:
+The MSVC build runs on Windows Server 2022 with VC-LTL5 `5.3.1`; VC-LTL is
+intentionally target-gated. Both Windows targets select mimalloc `0.1.52` in the three
+final delivery surfaces:
 
 ```console
 cargo build --workspace --release --target x86_64-pc-windows-msvc
@@ -131,4 +131,5 @@ PE Netplan is licensed under the [Mozilla Public License 2.0](LICENSE).
 | Complete user guide | [User guide](docs/USER_GUIDE.md) | [使用指南](docs/zh-CN/USER_GUIDE.md) |
 | JSON-RPC gateway | [JSON-RPC](docs/JSONRPC.md) | [JSON-RPC](docs/zh-CN/JSONRPC.md) |
 | Rust SDK, C ABI, and IPC | [Integration](docs/INTEGRATION.md) | [集成指南](docs/zh-CN/INTEGRATION.md) |
+| Tagged GitHub releases | [Release guide](docs/RELEASING.md) | [发布指南](docs/zh-CN/RELEASING.md) |
 | Implementation and verification matrix | [Porting matrix](docs/PORTING.md) | [移植矩阵](docs/zh-CN/PORTING.md) |
